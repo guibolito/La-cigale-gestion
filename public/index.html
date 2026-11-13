@@ -439,6 +439,7 @@ function confirmBox(msg,yes,label='Supprimer'){
   $('#cf-yes').onclick=()=>{closeModal();yes()};
 }
 const F=(l,id,v='',o={})=>`<div class="field${o.full?' full':''}"><label for="f-${id}">${l}</label>${o.opts?`<select id="f-${id}">${o.opts.map(x=>{const [val,lab]=Array.isArray(x)?x:[x,x];return `<option value="${esc(val)}"${String(val)===String(v)?' selected':''}>${esc(lab)}</option>`}).join('')}</select>`:o.area?`<textarea id="f-${id}" rows="${o.rows||3}">${esc(v)}</textarea>`:`<input id="f-${id}" type="${o.type||'text'}" value="${esc(v)}"${o.step?` step="${o.step}"`:''}${o.ph?` placeholder="${esc(o.ph)}"`:''}${o.attr||''}>`}</div>`;
+const fullName=()=>[G('prenom'),G('nomf')].filter(Boolean).join(' ');
 const G=id=>{const e=$('#f-'+id);return e?(e.type==='checkbox'?e.checked:e.value.trim()):''};
 const N=id=>{const v=parseFloat(String(G(id)).replace(',','.'));return isFinite(v)?v:0};
 
@@ -542,7 +543,7 @@ function cStat(c){
 const cTag=c=>{const s=cStat(c);return pill(s[0],s[1])};
 function pClients(){
   return table('clients',[
-   {k:'nom',l:'Client',f:c=>`<b>${esc(c.nom)}</b>${demoTag(c)}<div class="muted mini">${esc([c.cp,c.ville].filter(Boolean).join(' '))}</div>`,s:c=>c.nom.toLowerCase()},
+   {k:'nom',l:'Client',f:c=>`<b>${esc(c.nom)}</b>${demoTag(c)}<div class="muted mini">${esc([c.cp,c.ville].filter(Boolean).join(' '))}</div>`,s:c=>((c.nomf||c.nom||'')+' '+(c.prenom||'')).toLowerCase()},
    {k:'st',l:'Statut',f:c=>cTag(c),s:c=>cStat(c)[0]},
    {k:'type',l:'Type',f:c=>esc(ctLabel(c.type)),hm:1,s:c=>c.type||''},
    {k:'tel',l:'Téléphone',f:c=>esc(c.tel||''),hm:1,s:c=>c.tel||''},
@@ -554,7 +555,7 @@ function pClients(){
 }
 function clientForm(c={}){
   const e=c.entretien||{};
-  modal(c.id?'Modifier le client':'Nouveau client',`<div class="form">${F('Nom, prénom ou raison sociale *','nom',c.nom,{full:1})}${F('Téléphone','tel',c.tel,{type:'tel'})}${F('Email','email',c.email,{type:'email'})}${F('Adresse du chantier / du client','adresse',c.adresse,{full:1})}${F('Code postal','cp',c.cp)}${F('Ville','ville',c.ville)}${F('Type de client','type',c.type||'particulier',{opts:CLIENT_TYPES})}${F('Comment nous a-t-il connus ?','source',c.source||'',{opts:['',...SOURCES]})}<div class="field full"><label>Activités du client</label><div class="row" style="gap:6px 14px;flex-wrap:wrap">${ACTIVITES.map((x,i)=>`<label class="row" style="gap:6px"><input type="checkbox" id="f-act-${i}"${(c.activites||[]).includes(x)?' checked':''} style="width:18px;height:18px"> ${x.replace(' (borne de recharge)','')}</label>`).join('')}</div></div>
+  modal(c.id?'Modifier le client':'Nouveau client',`<div class="form">${F('Prénom','prenom',c.prenom||'')}${F('Nom ou raison sociale *','nomf',c.nomf??c.nom??'')}${F('Téléphone','tel',c.tel,{type:'tel'})}${F('Email','email',c.email,{type:'email'})}${F('Adresse du chantier / du client','adresse',c.adresse,{full:1})}${F('Code postal','cp',c.cp)}${F('Ville','ville',c.ville)}${F('Type de client','type',c.type||'particulier',{opts:CLIENT_TYPES})}${F('Comment nous a-t-il connus ?','source',c.source||'',{opts:['',...SOURCES]})}<div class="field full"><label>Activités du client</label><div class="row" style="gap:6px 14px;flex-wrap:wrap">${ACTIVITES.map((x,i)=>`<label class="row" style="gap:6px"><input type="checkbox" id="f-act-${i}"${(c.activites||[]).includes(x)?' checked':''} style="width:18px;height:18px"> ${x.replace(' (borne de recharge)','')}</label>`).join('')}</div></div>
   <details style="grid-column:1/-1;border:1px solid var(--line);border-radius:10px;padding:8px 12px"${e.formule?' open':''}><summary style="cursor:pointer;font-weight:600">Contrat d’entretien (facultatif)</summary><div class="form" style="margin-top:10px">${F('Domaine','domaine',e.domaine||'Climatisation',{opts:DOMAINES})}${F('Formule','ent',e.formule||'',{opts:['',...Object.keys(FORMULES),'Sur mesure']})}${F('Nombre d’équipements','unites',e.unites||1,{type:'number'})}${F('Prix annuel HT (sur mesure)','prixAn',e.prixAn??'',{type:'number',step:'0.01'})}${F('Prochaine visite','prochaine',e.prochaine||'',{type:'date'})}</div></details>${F('Notes','notes',c.notes,{area:1,full:1})}</div>`,`<button class="btn" data-a="close">Annuler</button><button class="btn pri" data-a="saveClient" data-id="${c.id||''}">Enregistrer</button>`);
 }
 function clientView(id){
@@ -899,7 +900,7 @@ const A={
  loadDemo:()=>loadDemo(), clearDemo:()=>clearDemo(),
  wipe:()=>confirmBox('Effacer TOUTES les données (clients, devis, chantiers, factures, dépenses) ? Pensez à faire une sauvegarde avant. Cette action est définitive.',()=>{COLS.forEach(c=>S[c].slice().forEach(x=>del(c,x.id)));render();toast('Données effacées.')},'Tout effacer'),
  newClient:()=>clientForm({}), editClient:d=>clientForm(cli(d.id)), openClient:d=>clientView(d.id),
- saveClient:d=>{const nom=G('nom');if(!nom){toast('Le nom est obligatoire.');return}const o=d.id?{...cli(d.id)}:{};Object.assign(o,{nom,tel:G('tel'),email:G('email'),adresse:G('adresse'),cp:G('cp'),ville:G('ville'),type:G('type'),source:G('source'),notes:G('notes'),activites:ACTIVITES.filter((_,i)=>{const e=$('#f-act-'+i);return e&&e.checked}),entretien:{domaine:G('domaine'),formule:G('ent'),unites:N('unites')||1,prixAn:N('prixAn'),prochaine:G('prochaine')}});save('clients',o);closeModal();render();toast('Client enregistré.')},
+ saveClient:d=>{const nom=fullName();if(!nom){toast('Le nom est obligatoire.');return}const o=d.id?{...cli(d.id)}:{};Object.assign(o,{nom,prenom:G('prenom'),nomf:G('nomf'),tel:G('tel'),email:G('email'),adresse:G('adresse'),cp:G('cp'),ville:G('ville'),type:G('type'),source:G('source'),notes:G('notes'),activites:ACTIVITES.filter((_,i)=>{const e=$('#f-act-'+i);return e&&e.checked}),entretien:{domaine:G('domaine'),formule:G('ent'),unites:N('unites')||1,prixAn:N('prixAn'),prochaine:G('prochaine')}});save('clients',o);closeModal();render();toast('Client enregistré.')},
  delClient:d=>{const c=cli(d.id);if(S.factures.some(f=>f.clientId===d.id&&f.statut!=='Brouillon')){toast('Suppression impossible : ce client a des factures émises (à conserver 10 ans).');return}const used=S.devis.some(x=>x.clientId===d.id)||S.factures.some(x=>x.clientId===d.id);confirmBox(used?`Ce client a des devis ou factures liés. Les supprimer avec lui n’est pas possible : supprimez-le seulement s’il est vide. Continuer quand même ? Les documents resteront sans client.`:`Supprimer ${esc(c.nom)} ?`,()=>{del('clients',d.id);render();toast('Client supprimé.')})},
  newDevis:d=>devisForm({clientId:d.c||''}), openDevis:d=>devisForm(structuredClone(S.devis.find(x=>x.id===d.id))), saveDevis:d=>saveDevis(d.id),
  dupDevis:d=>{const o=structuredClone(S.devis.find(x=>x.id===d.id));delete o.id;delete o.num;delete o.chantierId;delete o.dateAcceptation;delete o.dateEnvoi;delete o.demo;delete o.relances;o.statut='Brouillon';o.date=today();o.validite=addDays(today(),+S.cfg.validiteJ||30);closeModal();devisForm(o);toast('Copie créée : enregistrez-la.')},
@@ -1056,18 +1057,18 @@ PX.pipeline=function(){
 function leadForm(l={}){
   const o={etape:'Nouveau',source:'Autre',besoin:'Installation clim',...l}, isNew=!o.id;
   modal(isNew?'Nouveau prospect':esc(o.nom)+demoTag(o),`${isNew?'':`<div class="row" style="margin-bottom:8px">${o.clientId?`<button class="btn sm" data-a="openClient" data-id="${o.clientId}">Voir le client</button>`:`<button class="btn sm pri" data-a="leadConvert" data-id="${o.id}">Transformer en client</button>`}<button class="btn sm" data-a="newDevis" data-c="${o.clientId||''}" ${o.clientId?'':'disabled title="Transformez d’abord en client"'}>Créer un devis</button></div>`}
-  <div class="form">${F('Nom *','nom',o.nom||'',{full:1})}${F('Téléphone','tel',o.tel||'',{type:'tel'})}${F('Email','email',o.email||'',{type:'email'})}${F('Ville','ville',o.ville||'')}${F('Besoin','besoin',o.besoin,{opts:TYPES})}${F('Valeur estimée HT (€)','valeur',o.valeur??'',{type:'number',step:'any'})}${F('Source','source',o.source,{opts:LEADSRC})}${F('Campagne','campagneId',o.campagneId||'',{opts:[['','— Aucune —'],...S.campagnes.map(c=>[c.id,c.nom])]})}${F('Étape','etape',o.etape,{opts:STAGES})}${F('Prochaine action le','prochaine',o.prochaine||'',{type:'date'})}${F('Motif si perdu','motif',o.motif||'',{opts:['','Trop cher','Concurrent','Pas de réponse','Projet abandonné','Hors zone','Autre']})}${F('Notes','notes',o.notes||'',{area:1,full:1})}</div>${isNew?'':interBlock('l',o.id)}`,
+  <div class="form">${F('Prénom','prenom',o.prenom||'')}${F('Nom ou raison sociale *','nomf',o.nomf??o.nom??'')}${F('Téléphone','tel',o.tel||'',{type:'tel'})}${F('Email','email',o.email||'',{type:'email'})}${F('Ville','ville',o.ville||'')}${F('Besoin','besoin',o.besoin,{opts:TYPES})}${F('Valeur estimée HT (€)','valeur',o.valeur??'',{type:'number',step:'any'})}${F('Source','source',o.source,{opts:LEADSRC})}${F('Campagne','campagneId',o.campagneId||'',{opts:[['','— Aucune —'],...S.campagnes.map(c=>[c.id,c.nom])]})}${F('Étape','etape',o.etape,{opts:STAGES})}${F('Prochaine action le','prochaine',o.prochaine||'',{type:'date'})}${F('Motif si perdu','motif',o.motif||'',{opts:['','Trop cher','Concurrent','Pas de réponse','Projet abandonné','Hors zone','Autre']})}${F('Notes','notes',o.notes||'',{area:1,full:1})}</div>${isNew?'':interBlock('l',o.id)}`,
   `${isNew?'':`<button class="btn bad sm" data-a="delLead" data-id="${o.id}">Supprimer</button>`}<span class="sp"></span><button class="btn" data-a="close">Annuler</button><button class="btn pri" data-a="saveLead" data-id="${o.id||''}">Enregistrer</button>`);
 }
 function leadToClient(l){
   if(l.clientId&&cli(l.clientId))return cli(l.clientId);
-  const c=save('clients',{demo:l.demo||undefined,id:uid(),nom:l.nom,tel:l.tel||'',email:l.email||'',ville:l.ville||'',cp:'',adresse:'',type:'particulier',source:l.source||'',notes:l.notes||'',entretien:{}});
+  const c=save('clients',{demo:l.demo||undefined,id:uid(),nom:l.nom,prenom:l.prenom||'',nomf:l.nomf||'',tel:l.tel||'',email:l.email||'',ville:l.ville||'',cp:'',adresse:'',type:'particulier',source:l.source||'',notes:l.notes||'',entretien:{}});
   save('leads',{...l,clientId:c.id}); return c;
 }
 Object.assign(A,{
  newLead:()=>{closeModal();leadForm({})}, openLead:d=>{closeModal();leadForm(lead(d.id))},
- saveLead:d=>{const nom=G('nom');if(!nom){toast('Le nom est obligatoire.');return}const o=d.id?{...lead(d.id)}:{id:uid(),created:today()};
-   Object.assign(o,{nom,tel:G('tel'),email:G('email'),ville:G('ville'),besoin:G('besoin'),valeur:N('valeur'),source:G('source'),campagneId:G('campagneId'),etape:G('etape'),prochaine:G('prochaine'),motif:G('motif'),notes:G('notes')});
+ saveLead:d=>{const nom=fullName();if(!nom){toast('Le nom est obligatoire.');return}const o=d.id?{...lead(d.id)}:{id:uid(),created:today()};
+   Object.assign(o,{nom,prenom:G('prenom'),nomf:G('nomf'),tel:G('tel'),email:G('email'),ville:G('ville'),besoin:G('besoin'),valeur:N('valeur'),source:G('source'),campagneId:G('campagneId'),etape:G('etape'),prochaine:G('prochaine'),motif:G('motif'),notes:G('notes')});
    save('leads',o);if(o.etape==='Gagné')leadToClient(o);closeModal();render();toast('Prospect enregistré.')},
  delLead:d=>confirmBox('Supprimer ce prospect ?',()=>{del('leads',d.id);closeModal();render()}),
  leadMove:d=>{const l=lead(d.id),i=STAGES.indexOf(l.etape)+(+d.d);if(i<0||i>3)return;const o={...l,etape:STAGES[i]};save('leads',o);
@@ -1501,8 +1502,8 @@ Object.assign(A,{
 /* ============ Anti-doublons ============ */
 const digits=s=>String(s||'').replace(/\D/g,'');
 function similar(list,o){const n=norm(o.nom),t=digits(o.tel),m=norm(o.email);return list.find(c=>c.id!==o.id&&((n&&norm(c.nom)===n)||(t.length>=8&&digits(c.tel)===t)||(m&&norm(c.email)===m)))}
-const _sc=A.saveClient; A.saveClient=d=>{if(!d.id){const nom=G('nom'),s=similar(S.clients,{nom,tel:G('tel'),email:G('email')});if(s&&window.__dupK!==norm(nom)){window.__dupK=norm(nom);toast(`« ${s.nom} » existe déjà. Cliquez encore sur Enregistrer pour créer un doublon.`);return}}return _sc(d)};
-const _sl=A.saveLead; A.saveLead=d=>{if(!d.id){const nom=G('nom'),o={nom,tel:G('tel'),email:G('email')},s=similar(S.clients,o)||similar(S.leads,o);if(s&&window.__dupK!==norm(nom)){window.__dupK=norm(nom);toast(`« ${s.nom} » existe déjà (client ou prospect). Cliquez encore pour créer un doublon.`);return}}return _sl(d)};
+const _sc=A.saveClient; A.saveClient=d=>{if(!d.id){const nom=fullName(),s=similar(S.clients,{nom,tel:G('tel'),email:G('email')});if(s&&window.__dupK!==norm(nom)){window.__dupK=norm(nom);toast(`« ${s.nom} » existe déjà. Cliquez encore sur Enregistrer pour créer un doublon.`);return}}return _sc(d)};
+const _sl=A.saveLead; A.saveLead=d=>{if(!d.id){const nom=fullName(),o={nom,tel:G('tel'),email:G('email')},s=similar(S.clients,o)||similar(S.leads,o);if(s&&window.__dupK!==norm(nom)){window.__dupK=norm(nom);toast(`« ${s.nom} » existe déjà (client ou prospect). Cliquez encore pour créer un doublon.`);return}}return _sl(d)};
 /* ============ Commande livrée = dépense créée toute seule ============ */
 const _scm=A.saveCmd; A.saveCmd=d=>{
   const st=G('statut'),mont=N('montant'),prev=d.id?S.commandes.find(x=>x.id===d.id):null,n0=S.commandes.length;
@@ -1680,15 +1681,15 @@ document.addEventListener('change',e=>{
   const old=$('#nc-box'); if(old)old.remove();
   if(t.value!=='__new__')return;
   const box=document.createElement('div'); box.id='nc-box'; box.className='form'; box.style.cssText='grid-column:1/-1;border:1px dashed var(--accent);border-radius:12px;padding:12px;margin:6px 0;background:var(--accent-soft)';
-  box.innerHTML='<div class="full" style="grid-column:1/-1;font-weight:700">Nouveau client / prospect</div>'+F('Nom, prénom ou société *','nc-nom','',{full:1})+F('Téléphone','nc-tel','',{type:'tel'})+F('Email','nc-email','',{type:'email'})+F('Adresse du chantier','nc-adresse','',{full:1})+F('Ville','nc-ville','');
+  box.innerHTML='<div class="full" style="grid-column:1/-1;font-weight:700">Nouveau client / prospect</div>'+F('Prénom','nc-prenom','')+F('Nom ou société *','nc-nom','')+F('Téléphone','nc-tel','',{type:'tel'})+F('Email','nc-email','',{type:'email'})+F('Adresse du chantier','nc-adresse','',{full:1})+F('Ville','nc-ville','');
   const host=t.closest('.field')||t; host.insertAdjacentElement('afterend',box); const n=$('#f-nc-nom'); if(n)n.focus();
 });
 function newCli(){
   const sel=$('#f-clientId'); if(!sel||sel.value!=='__new__')return true;
-  const nom=G('nc-nom'); if(!nom){toast('Indiquez le nom du nouveau client.');return false}
+  const pre=G('nc-prenom'), nomf=G('nc-nom'), nom=[pre,nomf].filter(Boolean).join(' '); if(!nomf){toast('Indiquez le nom du nouveau client.');return false}
   const tel=G('nc-tel'), email=G('nc-email'), dup=similar(S.clients,{nom,tel,email});
   let c=dup;
-  if(!c){c={id:uid(),nom,tel,email,adresse:G('nc-adresse'),cp:'',ville:G('nc-ville'),type:'particulier',source:'',notes:'Créé depuis un devis.',activites:[],entretien:{}};save('clients',c);toast('Client « '+nom+' » créé.')}
+  if(!c){c={id:uid(),nom,prenom:pre,nomf,tel,email,adresse:G('nc-adresse'),cp:'',ville:G('nc-ville'),type:'particulier',source:'',notes:'Créé depuis un devis.',activites:[],entretien:{}};save('clients',c);toast('Client « '+nom+' » créé.')}
   else toast('« '+dup.nom+' » existait déjà : devis rattaché à ce client.');
   sel.insertAdjacentHTML('beforeend','<option value="'+esc(c.id)+'">'+esc(c.nom)+'</option>'); sel.value=c.id; return true;
 }
@@ -1721,7 +1722,7 @@ function enhanceCli(){
   box.addEventListener('pointerdown',e=>{
     const it=e.target.closest('[data-cb]'); if(!it)return; e.preventDefault();
     if(it.dataset.cb==='c'){const c=cli(it.dataset.id); sel.value=c.id; fire(); inp.value=c.nom}
-    else{const nm=inp.value.trim(); sel.value='__new__'; fire(); const n=$('#f-nc-nom'); if(n){n.value=nm; n.focus()}}
+    else{const nm=inp.value.trim(); sel.value='__new__'; fire(); const w=nm.split(/\s+/).filter(Boolean), n=$('#f-nc-nom'), pn=$('#f-nc-prenom'); if(n){ if(w.length>1&&pn){pn.value=w[0];n.value=w.slice(1).join(' ')}else n.value=nm; n.focus()}}
     box.style.display='none';
   });
 }
