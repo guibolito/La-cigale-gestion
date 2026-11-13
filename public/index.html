@@ -1713,7 +1713,7 @@ function enhanceCli(){
   const item=(a,t,sub,extra='')=>'<div role="option" data-cb="'+a+'" '+extra+' style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line)"><b>'+t+'</b>'+(sub?'<div class="muted mini">'+sub+'</div>':'')+'</div>';
   function draw(){
     const q=norm(inp.value), raw=inp.value.trim();
-    const hits=S.clients.filter(c=>!q||norm([c.nom,c.ville,c.tel,c.email].join(' ')).includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom,'fr')).slice(0,6);
+    const hits=S.clients.filter(c=>!q||norm([c.nom,c.ville,c.tel,c.email].join(' ')).includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom,'fr')).slice(0,40);
     const exact=S.clients.some(c=>norm(c.nom)===q);
     const nw=!canNew?'':'<div role="option" data-cb="n" style="padding:12px 14px;cursor:pointer;border-bottom:2px solid var(--accent);background:var(--accent-soft);position:sticky;top:0"><b style="color:var(--accent-ink,#0c3b42)">+ Nouveau client'+(raw&&!exact?' « '+esc(raw)+' »':'')+'</b><div class="muted mini">Saisir ses coordonnées juste après</div></div>';
     box.innerHTML=nw+hits.map(c=>item('c',esc(c.nom),esc([c.ville,c.tel].filter(Boolean).join(' · ')),'data-id="'+esc(c.id)+'"')).join('');
@@ -1722,7 +1722,9 @@ function enhanceCli(){
   inp.addEventListener('focus',()=>{if(sel.value&&sel.value!=='__new__')inp.select();draw()});
   inp.addEventListener('input',()=>{ if(sel.value){sel.value='';fire()} draw() });
   inp.addEventListener('blur',()=>setTimeout(()=>{box.style.display='none'},150));
-  box.addEventListener('pointerdown',e=>{
+  box.style.maxHeight='45vh';box.style.overflowY='auto';box.style.webkitOverflowScrolling='touch';box.style.touchAction='pan-y';
+  box.addEventListener('mousedown',e=>e.preventDefault());
+  box.addEventListener('click',e=>{
     const it=e.target.closest('[data-cb]'); if(!it)return; e.preventDefault();
     if(it.dataset.cb==='c'){const c=cli(it.dataset.id); sel.value=c.id; fire(); inp.value=c.nom}
     else{const nm=inp.value.trim(); sel.value='__new__'; fire(); const w=nm.split(/\s+/).filter(Boolean), n=$('#f-nc-nom'), pn=$('#f-nc-prenom'); if(n){ if(w.length>1&&pn){pn.value=w[0];n.value=w.slice(1).join(' ')}else n.value=nm; n.focus()}}
