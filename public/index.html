@@ -91,7 +91,9 @@ input[type=checkbox]{width:18px;min-height:18px;height:18px;accent-color:var(--a
 .form .full{grid-column:1/-1}
 .tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .tools input[type=search]{max-width:320px}
-.tw{overflow-x:auto}
+.tw{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;overscroll-behavior-x:contain}
+html,body{overscroll-behavior-y:auto}
+.tabs{touch-action:pan-x pan-y}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:default;font-weight:600}
 th[data-sort]{cursor:pointer}th[data-sort]:hover{color:var(--fg)}
