@@ -379,10 +379,10 @@ function relanceInfo(d){
   return {n,due,late:due<today(),t:RELANCE_T[n],j:RELANCE_J[n]};
 }
 /* ============ Interface : navigation, tableaux, fenêtres ============ */
-const PAGES=[['tableau-de-bord','Tableau de bord','home','Pilotage'],['taches','À faire','check','Pilotage'],['objectifs','Objectifs','target','Pilotage'],['pipeline','Prospects','funnel','Ventes et CRM'],['clients','Clients','users','Ventes et CRM'],['devis','Devis','doc','Ventes et CRM'],['relances','Relances','bell','Ventes et CRM'],['entretiens','Entretiens','cal','Ventes et CRM'],['chantiers','Chantiers','tool','Production'],['planning','Planning','grid','Production'],['interventions','Interventions','clip','Production'],['parc','Parc installé','snow','Production'],['commandes','Commandes','box','Production'],['marketing','Marketing','mega','Marketing'],['factures','Factures','inv','Finance'],['depenses','Dépenses','cart','Finance'],['finance','Trésorerie et TVA','wallet','Finance'],['parametres','Paramètres','gear','Réglages']];
+const PAGES=[['tableau-de-bord','Tableau de bord','home','Pilotage'],['objectifs','Objectifs','target','Pilotage'],['pipeline','Prospects','funnel','Ventes et CRM'],['clients','Clients','users','Ventes et CRM'],['devis','Devis','doc','Ventes et CRM'],['relances','Relances','bell','Ventes et CRM'],['entretiens','Entretiens','cal','Ventes et CRM'],['chantiers','Chantiers','tool','Production'],['planning','Planning','grid','Production'],['interventions','Interventions','clip','Production'],['parc','Parc installé','snow','Production'],['commandes','Commandes','box','Production'],['marketing','Marketing','mega','Marketing'],['factures','Factures','inv','Finance'],['depenses','Dépenses','cart','Finance'],['finance','Trésorerie et TVA','wallet','Finance'],['parametres','Paramètres','gear','Réglages']];
 const PX={}, PXA={};
 const BN=['aujourdhui','devis','chantiers','factures'];
-const SIMPLE=['aujourdhui','tableau-de-bord','taches','clients','devis','chantiers','planning','factures','parametres'];
+const SIMPLE=['aujourdhui','tableau-de-bord','clients','devis','chantiers','planning','factures','parametres'];
 const visPages=()=>PAGES.filter(p=>!S.cfg.simple||SIMPLE.includes(p[0])||p[0]===ui.page);
 const LOGO='<svg width="34" height="34" viewBox="0 0 48 48" aria-hidden="true"><g stroke="#F7F4EC" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M22 19C13 17 5 25 5.5 40.5 14 40 22 33 23 24Z" fill="#CDEEF1" fill-opacity=".25"/><path d="M26 19C35 17 43 25 42.5 40.5 34 40 26 33 25 24Z" fill="#CDEEF1" fill-opacity=".25"/><path d="M20 25C20 32 22 38 24 40.5 26 38 28 32 28 25Z" fill="#2FB5C2"/><ellipse cx="24" cy="21" rx="5.8" ry="5.2" fill="#2FB5C2"/><path d="M15.5 11.5C15.5 9.5 19 8 24 8S32.5 9.5 32.5 11.5 29 15.5 24 15.5 15.5 13.5 15.5 11.5Z" fill="#2FB5C2"/></g><circle cx="16.5" cy="11.6" r="2.6" fill="#F7F4EC"/><circle cx="31.5" cy="11.6" r="2.6" fill="#F7F4EC"/></svg>';
 const T={}; // registre des tableaux
@@ -1540,14 +1540,14 @@ const chJour=()=>{const t=today();return S.chantiers.filter(c=>c.statut==='En co
 const qa=(a,l,ic,cls='')=>`<button class="tbtn ${cls}" data-a="${a}">${I(ic,26)}<span>${l}</span></button>`;
 function pToday(){
   if(!S.clients.length&&!S.devis.length&&!S.factures.length&&!S.chantiers.length)return pDash();
-  const t=today(), imp=impayes(), att=attente(), ag=agenda(), now=ag.filter(x=>x.d<=t), soon=ag.filter(x=>x.d>t&&x.d<=addDays(t,7)).slice(0,8), chs=chJour().slice(0,6);
+  const t=today(), imp=impayes(), att=attente(), ag=agenda(), now=ag.filter(x=>x.d<=t), soon=ag.filter(x=>x.d>t&&x.d<=addDays(t,30)).slice(0,15), chs=chJour().slice(0,6);
   const list=(ti,a,empty)=>`<div class="card pad"><b>${ti}</b>${a.length?a.map(agRow).join(''):`<div class="muted" style="margin-top:6px">${empty}</div>`}</div>`;
   return `<div class="muted">${fdate(t)}</div>
   <div class="grid g4">${kpi('À encaisser',eur0(imp.total),imp.retard.length?imp.retard.length+' en retard':'Aucun retard',imp.retard.length?'bad':'')}${kpi('Devis en attente',att.length,eur0(sum(att,d=>dTot(d).ht))+' HT')}${kpi('Chantiers en cours',S.chantiers.filter(c=>c.statut==='En cours').length,S.chantiers.filter(c=>c.statut==='À planifier').length+' à planifier')}${kpi('Trésorerie',eur0(tresorerie()),'Solde estimé')}</div>
   <div class="tgrid">${qa('newDevis',S.cfg.devisExterne?'Noter un devis':'Nouveau devis','doc','pri')}${qa('newClient','Nouveau client','users')}${qa('newFacture','Noter une facture','inv')}${qa('newTache','Nouvelle tâche','check')}</div>
   ${list('À traiter maintenant',now,'Rien d’urgent. Beau travail.')}
   <div class="card pad"><b>Chantiers en cours</b>${chs.length?chs.map(c=>`<div class="task" data-a="openChantier" data-id="${c.id}" style="cursor:pointer">${I('tool',18)}<div class="sp"><b>${esc(c.num)} · ${esc(cliName(c.clientId))}</b><div class="muted mini">${esc(c.titre||c.type||'')}${c.adresse?' · '+esc(c.adresse):''}</div></div><span class="muted">${c.finPrevue?fdate(c.finPrevue):''}</span></div>`).join(''):'<div class="muted" style="margin-top:6px">Aucun chantier en cours.</div>'}</div>
-  ${soon.length?list('Dans les 7 prochains jours',soon,''):''}`;
+  ${soon.length?list('À venir (30 jours)',soon,''):''}`;
 }
 PX.aujourdhui=pToday;
 const _fiche=fiche; fiche=c=>{const ph=c.photos||[];return _fiche(c)+(ast||ph.length?`<div class="card pad" style="margin-top:12px"><b>Photos du chantier</b>${ph.length?`<div class="ph">${ph.map(p=>`<a href="${esc(p.url)}" target="_blank" rel="noopener"><img src="${esc(p.url)}" alt="Photo du ${fdate(p.date)}" loading="lazy"></a>`).join('')}</div>`:''}${ast?`<label class="btn sm" style="margin-top:8px;cursor:pointer">${I('plus',15)} Ajouter des photos<input type="file" class="ch-photo" data-id="${c.id}" accept="image/*" capture="environment" multiple hidden></label>`:''}</div>`:'')};
