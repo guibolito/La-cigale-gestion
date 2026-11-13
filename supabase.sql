@@ -1,9 +1,9 @@
 -- La Cigale Gestion : base de données Supabase
 -- À coller en entier dans Supabase > SQL Editor > New query > Run (une seule fois).
 
--- 1) Qui a le droit d'entrer (les 2 cogérants). Remplacer EMAIL_DE_TON_ASSOCIE par son adresse AVANT de lancer.
+-- 1) Qui a le droit d'entrer (les 2 cogérants). L'associé s'ajoute plus tard dans la table members.
 create table if not exists public.members (email text primary key);
-insert into public.members (email) values ('guillaume.sasia@gmail.com'), ('EMAIL_DE_TON_ASSOCIE') on conflict do nothing;
+insert into public.members (email) values ('guillaume.sasia@gmail.com') on conflict do nothing;
 
 -- 2) Les données de l'appli (clients, devis, chantiers, factures... tout est stocké ici)
 create table if not exists public.docs (
