@@ -94,6 +94,10 @@ input[type=checkbox]{width:18px;min-height:18px;height:18px;accent-color:var(--a
 .tw{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;overscroll-behavior-x:contain}
 html,body{overscroll-behavior-y:auto}
 .tabs{touch-action:pan-x pan-y}
+.tools .fbtn{display:none}@media(max-width:860px){.tools:not(.open) select{display:none}.tools .fbtn{display:inline-flex}}
+
+@media(max-width:860px){.tw:has(tr.click){overflow:visible;touch-action:auto}.tw:has(tr.click) thead,.tw:has(tr.click) tfoot{display:none}.tw:has(tr.click) table,.tw:has(tr.click) tbody{display:block;width:100%}.tw:has(tr.click) tr.click{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;padding:12px 14px;border-bottom:1px solid var(--line)}.tw:has(tr.click) td{display:block;padding:0;border:0;overflow-wrap:anywhere}.tw:has(tr.click) td.hide-m{display:none}.tw:has(tr.click) td:first-child{flex:1 1 100%;font-size:15px}}
+
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:default;font-weight:600}
 th[data-sort]{cursor:pointer}th[data-sort]:hover{color:var(--fg)}
@@ -1819,6 +1823,8 @@ visPages=()=>PAGES.filter(p=>MENU.includes(p[0])&&(!S.cfg.simple||p[0]!=='market
 };}
 A.quick=()=>modal('Ajouter',`<div class="qbox"><button class="btn pri" data-a="quickGo" data-k="newDevis">${S.cfg.devisExterne?'Noter un devis':'Nouveau devis'}</button><button class="btn" data-a="quickGo" data-k="newClient">Nouveau client</button><button class="btn" data-a="quickGo" data-k="newTache">Nouvelle tâche</button><button class="btn" data-a="quickGo" data-k="photoDep">Photo d’un ticket (dépense)</button><button class="btn" data-a="quickGo" data-k="newFacture">Noter une facture</button><button class="btn" data-a="quickGo" data-k="newChantier">Nouveau chantier</button></div>`,'<button class="btn" data-a="close">Fermer</button>');
 A.quickGo=d=>{closeModal();setTimeout(()=>{if(d.k==='photoDep'){depenseForm({libelle:'Ticket '+fdate(today())});setTimeout(()=>{const f=$('#jf-file');if(f){f.setAttribute('capture','environment');f.click()}},250)}else A[d.k]({})},60)};
+A.togFlt=(d,el)=>{const t=el.closest('.tools');t.classList.toggle('open');el.textContent=t.classList.contains('open')?'Masquer les filtres':'Filtres et tri'};
+{const _r=render;render=function(){_r();$$('.tools').forEach(t=>{if(!t.querySelector('select')||t.querySelector('.fbtn'))return;const q=t.querySelector('input[type=search]');const b='<button class="btn sm fbtn" data-a="togFlt" type="button">Filtres et tri</button>';q?q.insertAdjacentHTML('afterend',b):t.insertAdjacentHTML('afterbegin',b)})}}
 applyTheme(); const h0=location.hash.slice(1); if(PAGES.some(p=>p[0]===h0))ui.page=h0;
 render(); initData();
 </script>
