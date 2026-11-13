@@ -1697,6 +1697,34 @@ const _sd10=saveDevis; saveDevis=function(id){ if(!newCli())return; return _sd10
 const _fi10=fiche; fiche=c=>_fi10(c).replace(/^/,'<div style="margin-bottom:8px">'+cTag(c)+'</div>');
 
 const _oc10=A.openClient; A.openClient=d=>String(d.id).startsWith('lead:')?A.openLead({id:String(d.id).slice(5)}):_oc10(d);
+
+/* ===== Devis : champ Client = recherche (clients existants) + « Nouveau client » en une ligne ===== */
+function enhanceCli(){
+  const sel=$('#f-clientId'); if(!sel||$('#cb-in'))return;
+  const host=sel.closest('.field')||sel.parentElement; host.style.position='relative'; sel.style.display='none';
+  const cur=cli(sel.value);
+  host.insertAdjacentHTML('beforeend','<input id="cb-in" type="search" autocomplete="off" placeholder="Rechercher un client ou taper un nouveau nom…" value="'+esc(cur?cur.nom:'')+'"><div id="cb-list" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:var(--surface,#fff);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(16,36,58,.18);max-height:260px;overflow:auto;margin-top:4px"></div>');
+  const inp=$('#cb-in'), box=$('#cb-list');
+  const fire=()=>sel.dispatchEvent(new Event('change',{bubbles:true}));
+  const item=(a,t,sub,extra='')=>'<div role="option" data-cb="'+a+'" '+extra+' style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line)"><b>'+t+'</b>'+(sub?'<div class="muted mini">'+sub+'</div>':'')+'</div>';
+  function draw(){
+    const q=norm(inp.value), raw=inp.value.trim();
+    const hits=S.clients.filter(c=>!q||norm([c.nom,c.ville,c.tel,c.email].join(' ')).includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom,'fr')).slice(0,6);
+    const exact=S.clients.some(c=>norm(c.nom)===q);
+    box.innerHTML=hits.map(c=>item('c',esc(c.nom),esc([c.ville,c.tel].filter(Boolean).join(' · ')),'data-id="'+esc(c.id)+'"')).join('')+(raw&&!exact?item('n','+ Nouveau client « '+esc(raw)+' »','Saisir ses coordonnées juste après'):'')+(!hits.length&&!raw?'<div class="pad muted">Aucun client : tapez un nom pour en créer un.</div>':'');
+    box.style.display='block';
+  }
+  inp.addEventListener('focus',()=>{if(sel.value&&sel.value!=='__new__')inp.select();draw()});
+  inp.addEventListener('input',()=>{ if(sel.value){sel.value='';fire()} draw() });
+  inp.addEventListener('blur',()=>setTimeout(()=>{box.style.display='none'},150));
+  box.addEventListener('pointerdown',e=>{
+    const it=e.target.closest('[data-cb]'); if(!it)return; e.preventDefault();
+    if(it.dataset.cb==='c'){const c=cli(it.dataset.id); sel.value=c.id; fire(); inp.value=c.nom}
+    else{const nm=inp.value.trim(); sel.value='__new__'; fire(); const n=$('#f-nc-nom'); if(n){n.value=nm; n.focus()}}
+    box.style.display='none';
+  });
+}
+const _df10=devisForm; devisForm=function(d){const r=_df10(d); try{enhanceCli()}catch(e){console.error(e)} return r};
 window.CG={S,A,save,del,metrics,impayes,tresorerie,totals,chantierFin,fStatut,resteOf,paidOf,dStatut,rangeOf,devisStats,loadDemo,clearDemo,render,ui,nextNum,pdf,csvOf,toFacture,groupedLines,dTot,fTot,attente,relanceInfo,mkChantier,D_:null};
 applyTheme(); const h0=location.hash.slice(1); if(PAGES.some(p=>p[0]===h0))ui.page=h0;
 render(); initData();
