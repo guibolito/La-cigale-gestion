@@ -585,11 +585,11 @@ function totBlock(){
 }
 function refreshTot(){const e=$('#tot');if(e)e.innerHTML=totBlock();(DR.o.lignes||[]).forEach((l,i)=>{const c=$('#lt-'+i);if(c)c.textContent=eur(lt(l).ht)})}
 function remountLines(){$('#lines').innerHTML=linesTable();refreshTot()}
-const cliOpts=()=>[['','— Choisir un client —'],...S.clients.slice().sort((a,b)=>a.nom.localeCompare(b.nom,'fr')).map(c=>[c.id,c.nom])];
+const cliOpts=(withNew)=>[['','— Choisir un client —'],...(withNew?[['__new__','+ Nouveau client / prospect']]:[]),...S.clients.slice().sort((a,b)=>a.nom.localeCompare(b.nom,'fr')).map(c=>[c.id,c.nom])];
 function devisForm(d){
   const isNew=!d.id; if(isNew){d={clientId:d.clientId||'',date:today(),validite:addDays(today(),+S.cfg.validiteJ||30),statut:'Brouillon',type:'Installation clim',lignes:[newLine()],conditions:S.cfg.conditions,...d}}
   DR={kind:'devis',o:structuredClone(d)}; const locked=d.statut==='Accepté';
-  modal(isNew?'Nouveau devis':'Devis '+esc(d.num),`<div class="form">${F('Client *','clientId',d.clientId,{opts:cliOpts()})}${F('Objet des travaux','titre',d.titre||'',{ph:'Ex. Installation clim salon + chambre'})}${F('Type d’intervention','type',d.type,{opts:TYPES})}${F('Statut','statut',d.statut,{opts:['Brouillon','Envoyé','En attente','Accepté','Refusé']})}${F('Date de création','date',d.date,{type:'date'})}${F('Valable jusqu’au','validite',d.validite,{type:'date'})}</div><div id="lines">${linesTable()}</div><div id="tot">${totBlock()}</div><div class="form"><label class="row full" style="gap:8px"><input type="checkbox" id="f-horsEtab"${d.horsEtab?' checked':''}> Signé hors établissement (chez le client, démarchage) : rétractation de 14 jours</label><label class="row full" style="gap:8px"><input type="checkbox" id="f-tvaReduite"${d.tvaReduite?' checked':''}> Logement de plus de 2 ans : TVA réduite (attestation à faire signer)</label>${F('Conditions de paiement','conditions',d.conditions,{area:1,full:1})}${F('Notes et observations','notes',d.notes||'',{area:1,full:1})}</div>${d.id?`<div class="row mini muted">${d.dateEnvoi?`Envoyé le ${fdate(d.dateEnvoi)}`:''}${d.dateAcceptation?` · Accepté le ${fdate(d.dateAcceptation)}`:''}${d.chantierId?` · <a href="#" data-a="openChantier" data-id="${d.chantierId}">Voir le chantier</a>`:''}</div>`:''}`,
+  modal(isNew?'Nouveau devis':'Devis '+esc(d.num),`<div class="form">${F('Client *','clientId',d.clientId,{opts:cliOpts(true)})}${F('Objet des travaux','titre',d.titre||'',{ph:'Ex. Installation clim salon + chambre'})}${F('Type d’intervention','type',d.type,{opts:TYPES})}${F('Statut','statut',d.statut,{opts:['Brouillon','Envoyé','En attente','Accepté','Refusé']})}${F('Date de création','date',d.date,{type:'date'})}${F('Valable jusqu’au','validite',d.validite,{type:'date'})}</div><div id="lines">${linesTable()}</div><div id="tot">${totBlock()}</div><div class="form"><label class="row full" style="gap:8px"><input type="checkbox" id="f-horsEtab"${d.horsEtab?' checked':''}> Signé hors établissement (chez le client, démarchage) : rétractation de 14 jours</label><label class="row full" style="gap:8px"><input type="checkbox" id="f-tvaReduite"${d.tvaReduite?' checked':''}> Logement de plus de 2 ans : TVA réduite (attestation à faire signer)</label>${F('Conditions de paiement','conditions',d.conditions,{area:1,full:1})}${F('Notes et observations','notes',d.notes||'',{area:1,full:1})}</div>${d.id?`<div class="row mini muted">${d.dateEnvoi?`Envoyé le ${fdate(d.dateEnvoi)}`:''}${d.dateAcceptation?` · Accepté le ${fdate(d.dateAcceptation)}`:''}${d.chantierId?` · <a href="#" data-a="openChantier" data-id="${d.chantierId}">Voir le chantier</a>`:''}</div>`:''}`,
   `${d.id?`<button class="btn bad sm" data-a="delDevis" data-id="${d.id}">Supprimer</button>`:''}<span class="sp"></span>${d.id?`<button class="btn" data-a="dupDevis" data-id="${d.id}">Dupliquer</button><button class="btn" data-a="pdfDevis" data-id="${d.id}">${I('dl')}PDF</button>`:''}${d.id&&d.statut==='Accepté'?`<button class="btn" data-a="toFacture" data-id="${d.id}" data-m="acompte">Noter la facture d’acompte</button><button class="btn" data-a="toFacture" data-id="${d.id}" data-m="solde">Noter la facture de solde</button>`:''}<button class="btn" data-a="close">Fermer</button><button class="btn pri" data-a="saveDevis" data-id="${d.id||''}">Enregistrer</button>`);
 }
 function saveDevis(id){
@@ -1597,7 +1597,7 @@ const _df=devisForm; devisForm=function(d){
   const L=d.lignes||[], t=totals(L), ht=L.length?r2(t.ht):'', tvaT=L.length&&t.ht?nearTva(t.tva/t.ht*100):(+S.cfg.tvaDef||10);
   DR={kind:'devis',o:structuredClone(d)};
   modal(isNew?'Noter un devis':'Devis '+esc(d.num||'')+demoTag(d),`<div class="alert info" style="margin-bottom:8px"><span>Le devis se fait dans <b>${esc(S.cfg.logiciel||'votre logiciel')}</b>. Ici, on le <b>note</b> pour les relances, le suivi des signatures et la création du chantier.</span></div>
-  <div class="form">${F('Client *','clientId',d.clientId,{opts:cliOpts()})}${F('N° du devis (de votre logiciel) *','num',d.num||'',{ph:'Ex. D-2026-0042'})}${F('Objet des travaux','titre',d.titre||'',{ph:'Ex. Installation clim salon + chambre'})}${F('Type d’intervention','type',d.type||'Installation clim',{opts:TYPES})}${F('Statut','statut',d.statut==='Brouillon'?'Envoyé':d.statut,{opts:['Envoyé','En attente','Accepté','Refusé']})}${F('Date d’envoi','date',d.date,{type:'date'})}${F('Valable jusqu’au','validite',d.validite||'',{type:'date'})}${F('Montant HT','ht',ht,{type:'number',step:'0.01'})}${F('TVA %','tvat',tvaT,{opts:[0,5.5,10,20]})}${F('Montant TTC','ttc',ht!==''?r2(t.ttc):'',{type:'number',step:'0.01'})}${F('Notes','notes',d.notes||'',{area:1,full:1})}</div>`,
+  <div class="form">${F('Client *','clientId',d.clientId,{opts:cliOpts(true)})}${F('N° du devis (de votre logiciel) *','num',d.num||'',{ph:'Ex. D-2026-0042'})}${F('Objet des travaux','titre',d.titre||'',{ph:'Ex. Installation clim salon + chambre'})}${F('Type d’intervention','type',d.type||'Installation clim',{opts:TYPES})}${F('Statut','statut',d.statut==='Brouillon'?'Envoyé':d.statut,{opts:['Envoyé','En attente','Accepté','Refusé']})}${F('Date d’envoi','date',d.date,{type:'date'})}${F('Valable jusqu’au','validite',d.validite||'',{type:'date'})}${F('Montant HT','ht',ht,{type:'number',step:'0.01'})}${F('TVA %','tvat',tvaT,{opts:[0,5.5,10,20]})}${F('Montant TTC','ttc',ht!==''?r2(t.ttc):'',{type:'number',step:'0.01'})}${F('Notes','notes',d.notes||'',{area:1,full:1})}</div>`,
   `${d.id?`<button class="btn bad sm" data-a="delDevis" data-id="${d.id}">Supprimer</button>`:''}<span class="sp"></span>${d.id&&d.statut==='Accepté'?`<button class="btn" data-a="toFacture" data-id="${d.id}" data-m="acompte">Noter la facture d’acompte</button><button class="btn" data-a="toFacture" data-id="${d.id}" data-m="solde">Noter la facture de solde</button>`:''}<button class="btn" data-a="close">Fermer</button><button class="btn pri" data-a="saveDevis" data-id="${d.id||''}">Enregistrer</button>`);
 };
 const _sd=saveDevis; saveDevis=function(id){
@@ -1662,6 +1662,26 @@ PX.pilotage=pPilotage;
 /* ===== Web app : déconnexion ===== */
 A.logout=()=>{if(window.CG_logout)window.CG_logout()};
 {const _pp10=pParams; pParams=()=>_pp10()+(window.__sb?`<div class="card pad" style="margin-top:14px"><b>Compte</b><p class="muted" style="margin:6px 0">Connecté en tant que ${esc(JU||'')}.</p><button class="btn sm" data-a="logout">Se déconnecter</button></div>`:'')}
+
+/* ===== Devis : choisir un client existant OU saisir un nouveau prospect directement ===== */
+document.addEventListener('change',e=>{
+  const t=e.target; if(!t||t.id!=='f-clientId')return;
+  const old=$('#nc-box'); if(old)old.remove();
+  if(t.value!=='__new__')return;
+  const box=document.createElement('div'); box.id='nc-box'; box.className='form'; box.style.cssText='grid-column:1/-1;border:1px dashed var(--accent);border-radius:12px;padding:12px;margin:6px 0;background:var(--accent-soft)';
+  box.innerHTML='<div class="full" style="grid-column:1/-1;font-weight:700">Nouveau client / prospect</div>'+F('Nom, prénom ou société *','nc-nom','',{full:1})+F('Téléphone','nc-tel','',{type:'tel'})+F('Email','nc-email','',{type:'email'})+F('Adresse du chantier','nc-adresse','',{full:1})+F('Ville','nc-ville','');
+  const host=t.closest('.field')||t; host.insertAdjacentElement('afterend',box); const n=$('#f-nc-nom'); if(n)n.focus();
+});
+function newCli(){
+  const sel=$('#f-clientId'); if(!sel||sel.value!=='__new__')return true;
+  const nom=G('nc-nom'); if(!nom){toast('Indiquez le nom du nouveau client.');return false}
+  const tel=G('nc-tel'), email=G('nc-email'), dup=similar(S.clients,{nom,tel,email});
+  let c=dup;
+  if(!c){c={id:uid(),nom,tel,email,adresse:G('nc-adresse'),cp:'',ville:G('nc-ville'),type:'particulier',source:'',notes:'Créé depuis un devis.',activites:[],entretien:{}};save('clients',c);toast('Client « '+nom+' » créé.')}
+  else toast('« '+dup.nom+' » existait déjà : devis rattaché à ce client.');
+  sel.insertAdjacentHTML('beforeend','<option value="'+esc(c.id)+'">'+esc(c.nom)+'</option>'); sel.value=c.id; return true;
+}
+const _sd10=saveDevis; saveDevis=function(id){ if(!newCli())return; return _sd10(id) };
 window.CG={S,A,save,del,metrics,impayes,tresorerie,totals,chantierFin,fStatut,resteOf,paidOf,dStatut,rangeOf,devisStats,loadDemo,clearDemo,render,ui,nextNum,pdf,csvOf,toFacture,groupedLines,dTot,fTot,attente,relanceInfo,mkChantier,D_:null};
 applyTheme(); const h0=location.hash.slice(1); if(PAGES.some(p=>p[0]===h0))ui.page=h0;
 render(); initData();
