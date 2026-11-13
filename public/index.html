@@ -530,16 +530,25 @@ function drawDash(){
 const actOf=c=>{const K=cache();if(!K.dvc)K.dvc=grp(S.devis,'clientId');return [...new Set([...(c.activites||[]),...(K.dvc.get(c.id)||[]).map(d=>ACT_OF[d.type]).filter(Boolean)])]};
 const ctLabel=v=>(CLIENT_TYPES.find(x=>x[0]===v)||[,v])[1];
 const factHT=id=>{const K=cache();if(!K.fhc){K.fhc=new Map();facturesValides().forEach(f=>K.fhc.set(f.clientId,(K.fhc.get(f.clientId)||0)+fTot(f).ht))}return K.fhc.get(id)||0};
+function cStat(c){
+  const dv=S.devis.filter(d=>d.clientId===c.id), ch=S.chantiers.some(x=>x.clientId===c.id), fa=S.factures.some(x=>x.clientId===c.id);
+  if(ch||fa||dv.some(d=>d.statut==='Accepté')||(c.entretien&&c.entretien.formule))return ['Client','good'];
+  if(dv.some(d=>['Envoyé','En attente','Brouillon'].includes(d.statut)))return ['Prospect · devis en cours','warn'];
+  if(dv.length&&dv.every(d=>d.statut==='Refusé'))return ['Prospect perdu','mut'];
+  return ['Prospect','info'];
+}
+const cTag=c=>{const s=cStat(c);return pill(s[0],s[1])};
 function pClients(){
   return table('clients',[
    {k:'nom',l:'Client',f:c=>`<b>${esc(c.nom)}</b>${demoTag(c)}<div class="muted mini">${esc([c.cp,c.ville].filter(Boolean).join(' '))}</div>`,s:c=>c.nom.toLowerCase()},
+   {k:'st',l:'Statut',f:c=>cTag(c),s:c=>cStat(c)[0]},
    {k:'type',l:'Type',f:c=>esc(ctLabel(c.type)),hm:1,s:c=>c.type||''},
    {k:'tel',l:'Téléphone',f:c=>esc(c.tel||''),hm:1,s:c=>c.tel||''},
    {k:'src',l:'Source',f:c=>esc(c.source||''),hm:1,s:c=>c.source||''},
    {k:'act',l:'Activités',f:c=>actOf(c).map(a=>pill(a.replace(' (borne de recharge)',''),'mut')).join(' ')||'<span class="muted">—</span>',hm:1,s:c=>actOf(c).join(', ')},
    {k:'ent',l:'Contrat',f:c=>c.entretien&&c.entretien.formule?pill(c.entretien.formule,'info')+(c.entretien.prochaine?`<div class="muted mini">visite ${fdate(c.entretien.prochaine)}</div>`:''):'<span class="muted">—</span>',hm:1,s:c=>c.entretien?.formule||''},
    {k:'ca',l:'Facturé HT',r:1,f:c=>eur0(factHT(c.id)),v:c=>factHT(c.id)}
-  ],()=>S.clients,{flt:[{k:'t',l:'Tous les types',opts:CLIENT_TYPES,get:c=>c.type||''},{k:'s',l:'Toutes les sources',opts:()=>[...new Set(S.clients.map(c=>c.source).filter(Boolean))].sort(),get:c=>c.source||''},{k:'a',l:'Toutes les activités',opts:ACTIVITES,get:c=>actOf(c).join('|'),m:'in'},{k:'e',l:'Contrat d’entretien',opts:[['oui','Avec contrat'],['non','Sans contrat']],get:c=>c.entretien&&c.entretien.formule?'oui':'non'},{k:'v',l:'Toutes les villes',opts:()=>[...new Set(S.clients.map(c=>c.ville).filter(Boolean))].sort(),get:c=>c.ville||''}],row:'openClient',sort:'nom',dir:1,emptyT:'Aucun client',empty:'Créez votre premier client avec le bouton « Nouveau client ».',foot:rows=>['<b>'+rows.length+' client(s)</b>','','','','','',eur0(sum(rows,c=>factHT(c.id)))]});
+  ],()=>S.clients,{flt:[{k:'st',l:'Prospects et clients',opts:[['Client','Clients'],['Prospect','Prospects']],get:c=>cStat(c)[0].startsWith('Prospect')?'Prospect':'Client'},{k:'t',l:'Tous les types',opts:CLIENT_TYPES,get:c=>c.type||''},{k:'s',l:'Toutes les sources',opts:()=>[...new Set(S.clients.map(c=>c.source).filter(Boolean))].sort(),get:c=>c.source||''},{k:'a',l:'Toutes les activités',opts:ACTIVITES,get:c=>actOf(c).join('|'),m:'in'},{k:'e',l:'Contrat d’entretien',opts:[['oui','Avec contrat'],['non','Sans contrat']],get:c=>c.entretien&&c.entretien.formule?'oui':'non'},{k:'v',l:'Toutes les villes',opts:()=>[...new Set(S.clients.map(c=>c.ville).filter(Boolean))].sort(),get:c=>c.ville||''}],row:'openClient',sort:'nom',dir:1,emptyT:'Aucun client',empty:'Créez votre premier client avec le bouton « Nouveau client ».',foot:rows=>['<b>'+rows.length+' client(s)</b>','','','','','',eur0(sum(rows,c=>factHT(c.id)))]});
 }
 function clientForm(c={}){
   const e=c.entretien||{};
@@ -1682,6 +1691,8 @@ function newCli(){
   sel.insertAdjacentHTML('beforeend','<option value="'+esc(c.id)+'">'+esc(c.nom)+'</option>'); sel.value=c.id; return true;
 }
 const _sd10=saveDevis; saveDevis=function(id){ if(!newCli())return; return _sd10(id) };
+
+const _fi10=fiche; fiche=c=>_fi10(c).replace(/^/,'<div style="margin-bottom:8px">'+cTag(c)+'</div>');
 window.CG={S,A,save,del,metrics,impayes,tresorerie,totals,chantierFin,fStatut,resteOf,paidOf,dStatut,rangeOf,devisStats,loadDemo,clearDemo,render,ui,nextNum,pdf,csvOf,toFacture,groupedLines,dTot,fTot,attente,relanceInfo,mkChantier,D_:null};
 applyTheme(); const h0=location.hash.slice(1); if(PAGES.some(p=>p[0]===h0))ui.page=h0;
 render(); initData();
