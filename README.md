@@ -32,3 +32,14 @@ Deux personnes, chacune avec son email et son mot de passe, mêmes données en d
 - Les photos et justificatifs sont dans un dossier public de Supabase avec des adresses non devinables. Ne pas les partager.
 - L'offre gratuite de Supabase met un projet en pause après une période sans activité : utiliser l'appli chaque semaine l'évite. Vérifier les conditions actuelles des offres gratuites Supabase et Vercel.
 - Mise à jour de l'appli : remplacer les fichiers dans GitHub, Vercel redéploie tout seul.
+
+## Mise à jour 1 : photos privées, mot de passe oublié, notifications
+
+1. **Supabase > SQL Editor** : exécuter `supabase-maj-1.sql` (photos privées + abonnements aux notifications). À faire une seule fois.
+2. **Supabase > Authentication > URL Configuration** : mettre « Site URL » = l'adresse du site Vercel, et l'ajouter dans « Redirect URLs » (sinon le lien « mot de passe oublié » ne revient pas sur l'appli).
+3. **Vercel > Settings > Environment Variables** (puis « Redeploy ») :
+   - `SUPABASE_SERVICE_ROLE_KEY` : clé « service_role » (Supabase > Project Settings > API). Secrète : ne la partager nulle part ailleurs.
+   - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` : fournies séparément.
+   - `VAPID_SUBJECT` : `mailto:` suivi de l'email de l'entreprise.
+   - `CRON_SECRET` : une longue suite de caractères au choix.
+4. Sur l'iPhone : ouvrir l'appli depuis l'icône de l'écran d'accueil, Paramètres > Compte > « Activer les notifications ».

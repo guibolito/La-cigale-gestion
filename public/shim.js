@@ -12,17 +12,38 @@
       let o=document.getElementById('cg-login'); if(o)o.remove();
       o=document.createElement('div'); o.id='cg-login';
       o.style.cssText='position:fixed;inset:0;z-index:99999;background:#10243a;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Barlow,system-ui,sans-serif';
-      o.innerHTML=`<form style="background:#f7f4ec;border-radius:16px;padding:26px;max-width:360px;width:100%;display:grid;gap:12px"><h1 style="margin:0;font-size:24px;color:#10243a">La Cigale Gestion</h1><p style="margin:0;color:#4b5a6b">${msg||'Connectez-vous pour accéder à vos données.'}</p><input name="email" type="email" required autocomplete="username" placeholder="Email" style="padding:12px;border-radius:10px;border:1px solid #c9d2dc;font-size:16px"><input name="pw" type="password" required autocomplete="current-password" placeholder="Mot de passe" style="padding:12px;border-radius:10px;border:1px solid #c9d2dc;font-size:16px"><button style="padding:12px;border-radius:10px;border:0;background:#2fb5c2;color:#fff;font-size:16px;font-weight:600;cursor:pointer">Se connecter</button><div id="cg-err" style="color:#b42318;min-height:18px;font-size:14px"></div></form>`;
+      o.innerHTML=`<form style="background:#f7f4ec;border-radius:16px;padding:26px;max-width:360px;width:100%;display:grid;gap:12px"><h1 style="margin:0;font-size:24px;color:#10243a">La Cigale Gestion</h1><p style="margin:0;color:#4b5a6b">${msg||'Connectez-vous pour accéder à vos données.'}</p><input name="email" type="email" required autocomplete="username" placeholder="Email" style="padding:12px;border-radius:10px;border:1px solid #c9d2dc;font-size:16px"><input name="pw" type="password" required autocomplete="current-password" placeholder="Mot de passe" style="padding:12px;border-radius:10px;border:1px solid #c9d2dc;font-size:16px"><button style="padding:12px;border-radius:10px;border:0;background:#2fb5c2;color:#fff;font-size:16px;font-weight:600;cursor:pointer">Se connecter</button><div id="cg-err" style="color:#b42318;min-height:18px;font-size:14px"></div><a href="#" id="cg-forgot" style="color:#1f8d99;font-size:14px;text-align:center">Mot de passe oublié ?</a></form>`;
       document.body.appendChild(o);
       const f=o.querySelector('form');
       f.onsubmit=async e=>{e.preventDefault();o.querySelector('button').disabled=true;
         const {error}=await sb.auth.signInWithPassword({email:f.email.value.trim(),password:f.pw.value});
         if(error){o.querySelector('#cg-err').textContent=/invalid/i.test(error.message)?'Email ou mot de passe incorrect.':'Connexion impossible : '+error.message;o.querySelector('button').disabled=false;return}
         o.remove();res()};
+      o.querySelector('#cg-forgot').onclick=async e=>{e.preventDefault();const em=f.email.value.trim(),er=o.querySelector('#cg-err');
+        if(!em){er.style.color='#b42318';er.textContent='Saisissez d’abord votre email ci-dessus.';return}
+        const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+'/'});
+        er.style.color=error?'#b42318':'#16905f';er.textContent=error?'Envoi impossible : '+error.message:'Si ce compte existe, un email de réinitialisation vient d’être envoyé.'};
     });
   }
+  /* changer / définir le mot de passe (aussi après un lien « mot de passe oublié ») */
+  function pwUI(first){
+    return new Promise(res=>{
+      let o=document.getElementById('cg-pw'); if(o)o.remove();
+      o=document.createElement('div'); o.id='cg-pw';
+      o.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(16,36,58,.92);display:flex;align-items:center;justify-content:center;padding:20px;font-family:Barlow,system-ui,sans-serif';
+      o.innerHTML='<form style="background:#f7f4ec;border-radius:16px;padding:26px;max-width:360px;width:100%;display:grid;gap:12px"><h1 style="margin:0;font-size:22px;color:#10243a">'+(first?'Choisissez un nouveau mot de passe':'Changer mon mot de passe')+'</h1><p style="margin:0;color:#4b5a6b;font-size:14px">12 caractères minimum. Utilisez un gestionnaire de mots de passe.</p><input name="p1" type="password" required minlength="12" autocomplete="new-password" placeholder="Nouveau mot de passe" style="padding:12px;border-radius:10px;border:1px solid #c9d2dc;font-size:16px"><input name="p2" type="password" required minlength="12" autocomplete="new-password" placeholder="Répétez le mot de passe" style="padding:12px;border-radius:10px;border:1px solid #c9d2dc;font-size:16px"><button style="padding:12px;border-radius:10px;border:0;background:#2fb5c2;color:#fff;font-size:16px;font-weight:600">Enregistrer</button>'+(first?'':'<button type="button" id="cg-pw-x" style="padding:10px;border-radius:10px;border:1px solid #c9d2dc;background:#fff;font-size:15px">Annuler</button>')+'<div id="cg-pe" style="min-height:18px;font-size:14px;color:#b42318"></div></form>';
+      document.body.appendChild(o); const f=o.querySelector('form'); const x=o.querySelector('#cg-pw-x'); if(x)x.onclick=()=>{o.remove();res(false)};
+      f.onsubmit=async e=>{e.preventDefault(); const er=o.querySelector('#cg-pe');
+        if(f.p1.value!==f.p2.value){er.textContent='Les deux mots de passe sont différents.';return}
+        const {error}=await sb.auth.updateUser({password:f.p1.value});
+        if(error){er.textContent='Impossible : '+error.message;return}
+        o.remove(); say('Mot de passe modifié.'); res(true)};
+    });
+  }
+  window.CG_changePw=()=>sb?pwUI(false):null;
   async function connect(){
     if(!ok)return false;
+    const recovery=/type=recovery/.test(location.hash||'');
     sb=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true}});
     window.__sb=sb;
     let {data}=await sb.auth.getSession().catch(()=>({data:{}}));
@@ -31,6 +52,7 @@
       await loginUI();({data}=await sb.auth.getSession());
     }
     userEmail=(data&&data.session&&data.session.user&&data.session.user.email)||ls.get('cg_email')||''; ls.set('cg_email',userEmail);
+    if(recovery){try{history.replaceState(null,'',location.pathname)}catch{} await pwUI(true)}
     sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT')location.reload()});
     return true;
   }
@@ -97,7 +119,7 @@
   const assets={async upload(blob){
     const ext=(blob.type||'').includes('pdf')?'pdf':(blob.type||'').includes('png')?'png':'jpg', id=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2))+'.'+ext;
     const {error}=await sb.storage.from('assets').upload(id,blob,{contentType:blob.type||'application/octet-stream'}); if(error)throw error;
-    const {data}=sb.storage.from('assets').getPublicUrl(id); return {id,url:data.publicUrl,sizeBytes:blob.size,contentType:blob.type}}};
+    return {id,url:'cgpriv:'+id,sizeBytes:blob.size,contentType:blob.type}}};
   const user={id:async()=>userEmail.split('@')[0]||'moi',me:async()=>({id:userEmail,name:userEmail}),isOwner:()=>true,canEdit:()=>true};
   window.claude={use:async name=>{
     if(!ok)return null;
@@ -105,6 +127,14 @@
     if(!(await ready))return null;
     return ({db,assets,user})[name]||null;
   }};
+  /* fichiers privés : les liens « cgpriv:<id> » sont remplacés par des liens signés temporaires */
+  const signed={};
+  async function sign(id){const c=signed[id]; if(c&&c.t>Date.now())return c.u;
+    const {data,error}=await sb.storage.from('assets').createSignedUrl(id,3600); if(error||!data)return null; signed[id]={u:data.signedUrl,t:Date.now()+3000*1000}; return data.signedUrl}
+  async function fixEl(el){const at=el.tagName==='A'?'href':'src', v=el.getAttribute(at)||''; if(v.indexOf('cgpriv:')!==0||!sb)return;
+    const u=await sign(v.slice(7)); if(u)el.setAttribute(at,u)}
+  function scan(root){(root.querySelectorAll?root.querySelectorAll('img[src^="cgpriv:"],a[href^="cgpriv:"]'):[]).forEach(fixEl); if(root.matches&&root.matches('img[src^="cgpriv:"],a[href^="cgpriv:"]'))fixEl(root)}
+  new MutationObserver(m=>m.forEach(r=>{r.addedNodes.forEach(n=>n.nodeType===1&&scan(n)); if(r.type==='attributes')scan(r.target)})).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['src','href']});
   window.CG_logout=async()=>{if(sb){await sb.auth.signOut();ls.set('cg_email','');location.reload()}};
   window.addEventListener('DOMContentLoaded',()=>{if(ok&&navigator.onLine)flush()});
 })();

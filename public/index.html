@@ -260,7 +260,7 @@ const CAT0=[
 ['IR01','IRVE','Borne de recharge 7,4 kW fournie et posée (monophasé), prix indicatif',1500,750,5,10],['IR02','IRVE','Borne de recharge 11 kW fournie et posée (triphasé), prix indicatif',1900,1000,6,10],['IR03','IRVE','Ligne dédiée + protection différentielle (jusqu’à 15 m), prix indicatif',450,120,3,10],
 ['PV01','Panneaux solaires','Installation photovoltaïque 3 kWc en autoconsommation, prix indicatif',7500,4500,16,20],['PV02','Panneaux solaires','Installation photovoltaïque 6 kWc en autoconsommation, prix indicatif',12500,7500,24,20],['PV03','Panneaux solaires','Raccordement, Consuel et mise en service, prix indicatif',450,50,4,20]
 ].map(a=>({code:a[0],cat:a[1],lib:a[2],pu:a[3],cout:a[4],h:a[5],tva:a[6]}));
-const DEF={nom:'La Cigale Énergie',adresse:'Hyères (83400)',siret:'',tel:'',email:'',iban:'',decennale:'',mentions:'',regimeFiscal:'IS',regimeTva:'reel',simple:true,
+const DEF={nom:'La Cigale Énergie',adresse:'',siret:'',tel:'',email:'',iban:'',decennale:'',mentions:'',regimeFiscal:'IS',regimeTva:'reel',simple:true,
  pDevis:'DEV',pFact:'FAC',coutHoraire:28,acompte:30,treso0:20900,conditions:'Acompte de 30 % à la signature, solde à la fin du chantier. Paiement par virement, chèque ou carte.',validiteJ:30,echeanceJ:30,tvaDef:10,
  obj:{ca:20000,benef:5000,marge:55,chantiers:8,panier:2500},catalogue:null,
  msgs:['Bonjour [Client], c’est [Entreprise]. Avez-vous pu regarder notre devis [Devis] ? Je reste disponible pour toute question.','Appel : reprendre le devis [Devis], demander s’il manque une information ou un ajustement de prix.','Bonjour [Client], je reviens vers vous au sujet du devis [Devis]. Souhaitez-vous le valider ou l’adapter ? Cordialement, [Entreprise].','Bonjour [Client], dernier message au sujet du devis [Devis] : il reste valable encore quelques jours. N’hésitez pas à me dire si le projet est reporté.']};
@@ -1570,7 +1570,7 @@ function actsOf(x){
   switch(x.k){
    case 'Relancer le devis':{const d=S.devis.find(y=>y.id===id);if(!d)return'';const c=cli(d.clientId)||{},r=relanceInfo(d),msg=r.done?'':fillMsg(S.cfg.msgs[r.n],d);
      return (r.n===1?telB(c):r.n===2&&c.email?`<a class="btn sm" href="mailto:${esc(c.email)}?subject=${encodeURIComponent('Devis '+d.num)}&body=${encodeURIComponent(msg)}">Email</a>`:waB(c,msg))+bt('copyMsg',id,'Copier le message')+bt('relDone',id,'Relance faite')+bt('won',id,'Gagné')+bt('lost',id,'Perdu')}
-   case 'Devis à envoyer':return bt('pdfDevis',id,'PDF')+bt('devSent',id,'Marquer envoyé')
+   case 'Devis à envoyer':return bt('sendDevis',id,'Envoyer')+bt('pdfDevis',id,'PDF')+bt('devSent',id,'Marquer envoyé')
    case 'Facture en retard':{const f=S.factures.find(y=>y.id===id);if(!f)return'';const c=cli(f.clientId)||{};
      return telB(c)+waB(c,msgFact(f))+bt('relFact',id,'Copier la relance')+bt('payFull',id,'Paiement reçu')+bt('fReport',id,'Reporter 7 j')}
    case 'Prospect à rappeler':case 'Prospect sans suite':{const l=lead_(id);if(!l)return'';
@@ -1673,7 +1673,7 @@ function pPilotage(){
 PX.pilotage=pPilotage;
 /* ===== Web app : déconnexion ===== */
 A.logout=()=>{if(window.CG_logout)window.CG_logout()};
-{const _pp10=pParams; pParams=()=>_pp10()+(window.__sb?`<div class="card pad" style="margin-top:14px"><b>Compte</b><p class="muted" style="margin:6px 0">Connecté en tant que ${esc(JU||'')}.</p><button class="btn sm" data-a="logout">Se déconnecter</button></div>`:'')}
+{const _pp10=pParams; pParams=()=>_pp10()+(window.__sb?`<div class="card pad" style="margin-top:14px"><b>Compte</b><p class="muted" style="margin:6px 0">Connecté en tant que ${esc(JU||'')}.</p><div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm" data-a="changePw">Changer mon mot de passe</button><button class="btn sm" data-a="pushOn">Activer les notifications</button><button class="btn sm" data-a="logout">Se déconnecter</button></div></div>`:'')}
 
 /* ===== Devis : choisir un client existant OU saisir un nouveau prospect directement ===== */
 document.addEventListener('change',e=>{
@@ -1702,9 +1702,10 @@ const _oc10=A.openClient; A.openClient=d=>String(d.id).startsWith('lead:')?A.ope
 /* ===== Devis : champ Client = recherche (clients existants) + « Nouveau client » en une ligne ===== */
 function enhanceCli(){
   const sel=$('#f-clientId'); if(!sel||$('#cb-in'))return;
+  const canNew=[...sel.options].some(o=>o.value==='__new__');
   const host=sel.closest('.field')||sel.parentElement; host.style.position='relative'; sel.style.display='none';
   const cur=cli(sel.value);
-  host.insertAdjacentHTML('beforeend','<input id="cb-in" type="search" autocomplete="off" placeholder="Rechercher un client ou taper un nouveau nom…" value="'+esc(cur?cur.nom:'')+'"><div id="cb-list" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:var(--surface,#fff);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(16,36,58,.18);max-height:260px;overflow:auto;margin-top:4px"></div>');
+  host.insertAdjacentHTML('beforeend','<input id="cb-in" type="search" autocomplete="off" placeholder="'+(canNew?'Rechercher un client ou taper un nouveau nom…':'Rechercher un client…')+'" value="'+esc(cur?cur.nom:'')+'"><div id="cb-list" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:var(--surface,#fff);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(16,36,58,.18);max-height:260px;overflow:auto;margin-top:4px"></div>');
   const inp=$('#cb-in'), box=$('#cb-list');
   const fire=()=>sel.dispatchEvent(new Event('change',{bubbles:true}));
   const item=(a,t,sub,extra='')=>'<div role="option" data-cb="'+a+'" '+extra+' style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line)"><b>'+t+'</b>'+(sub?'<div class="muted mini">'+sub+'</div>':'')+'</div>';
@@ -1712,7 +1713,7 @@ function enhanceCli(){
     const q=norm(inp.value), raw=inp.value.trim();
     const hits=S.clients.filter(c=>!q||norm([c.nom,c.ville,c.tel,c.email].join(' ')).includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom,'fr')).slice(0,6);
     const exact=S.clients.some(c=>norm(c.nom)===q);
-    const nw='<div role="option" data-cb="n" style="padding:12px 14px;cursor:pointer;border-bottom:2px solid var(--accent);background:var(--accent-soft);position:sticky;top:0"><b style="color:var(--accent-ink,#0c3b42)">+ Nouveau client'+(raw&&!exact?' « '+esc(raw)+' »':'')+'</b><div class="muted mini">Saisir ses coordonnées juste après</div></div>';
+    const nw=!canNew?'':'<div role="option" data-cb="n" style="padding:12px 14px;cursor:pointer;border-bottom:2px solid var(--accent);background:var(--accent-soft);position:sticky;top:0"><b style="color:var(--accent-ink,#0c3b42)">+ Nouveau client'+(raw&&!exact?' « '+esc(raw)+' »':'')+'</b><div class="muted mini">Saisir ses coordonnées juste après</div></div>';
     box.innerHTML=nw+hits.map(c=>item('c',esc(c.nom),esc([c.ville,c.tel].filter(Boolean).join(' · ')),'data-id="'+esc(c.id)+'"')).join('');
     box.style.display='block';
   }
@@ -1726,7 +1727,74 @@ function enhanceCli(){
     box.style.display='none';
   });
 }
-const _df10=devisForm; devisForm=function(d){const r=_df10(d); try{enhanceCli()}catch(e){console.error(e)} return r};
+
+
+/* ===== Observateur : champ client avec recherche partout + bouton Envoyer dans les devis ===== */
+(function(){
+  let t=0; const check=()=>{t=0;
+    try{ if($('#f-clientId')&&!$('#cb-in'))enhanceCli();
+      const dup=document.querySelector('[data-a="dupDevis"]'); if(dup&&!document.querySelector('[data-a="sendDevis"].mod-send'))dup.insertAdjacentHTML('beforebegin','<button class="btn pri mod-send" data-a="sendDevis" data-id="'+dup.dataset.id+'">Envoyer</button>');
+    }catch(e){console.error(e)} };
+  new MutationObserver(()=>{if(!t)t=setTimeout(check,30)}).observe(document.body,{childList:true,subtree:true});
+})();
+
+/* ===== Envoyer un devis (WhatsApp, Mail, Messages…) avec le PDF ===== */
+const waNum=t=>{let d=String(t||'').replace(/\D/g,''); if(d.startsWith('00'))d=d.slice(2); if(d.startsWith('0'))d='33'+d.slice(1); return d};
+function devisMsg(o){const c=cli(o.clientId)||{}, tt=dTot(o);return 'Bonjour'+(c.prenom?' '+c.prenom:(c.nom?' '+c.nom.split(' ')[0]:''))+', voici notre devis '+(o.num||'')+(o.titre?' ('+o.titre+')':'')+' d’un montant de '+eur(tt.ttc)+' TTC'+(o.validite?', valable jusqu’au '+fdate(o.validite):'')+'. Je reste à votre disposition pour toute question. '+(S.cfg.nom||'')+(S.cfg.tel?' · '+S.cfg.tel:'')}
+function devisFile(o){const doc=pdf('devis',o);return new File([doc.output('arraybuffer')],(o.num||'devis')+'.pdf',{type:'application/pdf'})}
+function markSent(o){const x=S.devis.find(y=>y.id===o.id); if(x&&x.statut==='Brouillon'){save('devis',{...x,statut:'Envoyé',dateEnvoi:today()});render();toast('Devis marqué « Envoyé » : les relances démarrent.')}}
+A.sendDevis=d=>{
+  const o=S.devis.find(x=>x.id===d.id); if(!o)return; const c=cli(o.clientId)||{}, msg=devisMsg(o), can=(()=>{try{return navigator.canShare&&navigator.canShare({files:[new File([''],'a.pdf',{type:'application/pdf'})]})}catch{return false}})();
+  closeModal();
+  modal('Envoyer le devis '+esc(o.num||''),'<div style="display:grid;gap:10px" class="sendbox"><p class="muted" style="margin:0">À '+esc(c.nom||'?')+' · '+eur(dTot(o).ttc)+' TTC</p>'
+   +(can?'<button class="btn pri" data-a="sendShare" data-id="'+o.id+'">Partager le PDF (WhatsApp, Mail, Messages…)</button>':'')
+   +'<a class="btn'+(can?'':' pri')+'" target="_blank" rel="noopener" href="https://wa.me/'+waNum(c.tel)+'?text='+encodeURIComponent(msg)+'" data-a="sendMark" data-id="'+o.id+'">WhatsApp (message)</a>'
+   +'<a class="btn" href="mailto:'+encodeURIComponent(c.email||'')+'?subject='+encodeURIComponent('Devis '+(o.num||'')+' · '+(S.cfg.nom||''))+'&body='+encodeURIComponent(msg)+'" data-a="sendMark" data-id="'+o.id+'">Email (message)</a>'
+   +'<button class="btn" data-a="pdfDevis" data-id="'+o.id+'">Télécharger le PDF</button></div>','<button class="btn" data-a="close">Fermer</button>');
+};
+A.sendShare=async d=>{
+  const o=S.devis.find(x=>x.id===d.id); if(!o)return;
+  try{await navigator.share({files:[devisFile(o)],title:'Devis '+(o.num||''),text:devisMsg(o)}); closeModal(); markSent(o)}
+  catch(e){ if(e&&e.name!=='AbortError'){console.error(e);toast('Partage impossible : utilisez WhatsApp ou Email ci-dessous.')} }
+};
+A.sendMark=d=>{const o=S.devis.find(x=>x.id===d.id); if(o)markSent(o)};
+
+/* ===== Mot de passe + notifications (version en ligne) ===== */
+A.changePw=()=>{ if(window.CG_changePw)window.CG_changePw() };
+const VAPID='BIgUtzIUaKpBrA_fVDvUIP8jcOsEadGdzhWw1eLBTb0osTWxPa4LftMK6T2x1TLtMJmKyaLcVPUsx1rL48rhE3M';
+const b64u=s=>{const p='='.repeat((4-s.length%4)%4),b=(s+p).replace(/-/g,'+').replace(/_/g,'/'),r=atob(b);return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))};
+A.pushOn=async()=>{
+  try{
+    if(!('serviceWorker'in navigator)||!('PushManager'in window)){modal('Notifications','<p>Sur iPhone, ajoutez d’abord l’appli à l’écran d’accueil (Partager → Sur l’écran d’accueil), puis rouvrez-la depuis l’icône et réessayez.</p>','<button class="btn" data-a="close">OK</button>');return}
+    const perm=await Notification.requestPermission(); if(perm!=='granted'){toast('Notifications refusées dans les réglages du téléphone.');return}
+    const reg=await navigator.serviceWorker.ready; let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID)});
+    const j=sub.toJSON(), {error}=await window.__sb.from('push_subs').upsert({endpoint:j.endpoint,email:JU||'',sub:j},{onConflict:'endpoint'});
+    if(error)throw error; toast('Notifications activées : un résumé chaque matin.');
+  }catch(e){console.error(e);toast('Activation impossible : '+(e.message||'erreur'))}
+};
+
+/* ===== Démarrage : régler l’entreprise + supprimer les données fictives ===== */
+const hasDemo=()=>COLS.some(c=>S[c].some(x=>x.demo));
+A.setup=()=>modal('Mon entreprise','<p class="muted" style="margin:0 0 8px">Ces informations apparaissent sur vos devis et vos PDF. Vous pourrez les modifier dans Paramètres.</p><div class="form">'
+  +F('Nom commercial','s-nom',S.cfg.nom||'',{full:1})+F('Adresse','s-adresse',S.cfg.adresse||'',{full:1})+F('Téléphone','s-tel',S.cfg.tel||'',{type:'tel'})+F('Email','s-email',S.cfg.email||'',{type:'email'})
+  +F('SIRET','s-siret',S.cfg.siret||'',{})+F('IBAN (pour les règlements)','s-iban',S.cfg.iban||'',{})+F('Assurance décennale (assureur, n°)','s-decennale',S.cfg.decennale||'',{full:1})
+  +F('Mentions légales (forme juridique, capital, RCS, TVA)','s-mentions',S.cfg.mentions||'',{area:1,full:1})+'</div>',
+  '<button class="btn" data-a="close">Plus tard</button><button class="btn pri" data-a="setupSave">Enregistrer</button>');
+A.setupSave=()=>{['nom','adresse','tel','email','siret','iban','decennale','mentions'].forEach(k=>{S.cfg[k]=G('s-'+k)});S.cfg.setupDone=true;saveCfg();closeModal();render();toast('Entreprise enregistrée.')};
+A.setupSkip=()=>{S.cfg.setupDone=true;saveCfg();render()};
+const _pt11=pToday; pToday=function(){
+  const base=_pt11(); if(S.cfg.setupDone&&!hasDemo())return base;
+  const ok=S.cfg.setupDone&&(S.cfg.nom||'').trim()&&(S.cfg.siret||'').trim();
+  const step=(n,t,btn,done)=>'<div class="row" style="gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span class="pill '+(done?'good':'warn')+'">'+(done?'Fait':n)+'</span><span style="flex:1">'+t+'</span>'+(done?'':btn)+'</div>';
+  return '<div class="card pad" style="margin-bottom:12px;border-color:var(--accent)"><b>Démarrage : 2 minutes pour être prêt</b>'
+   +step('1','Renseigner mon entreprise (nom, adresse, SIRET, IBAN…)','<button class="btn sm pri" data-a="setup">Remplir</button>',!!ok)
+   +step('2','Supprimer les données fictives de démonstration','<button class="btn sm" data-a="clearDemo">Supprimer</button>',!hasDemo())
+   +'<div class="muted mini" style="margin-top:8px">Pour recevoir les rappels du matin : Paramètres → Compte → Activer les notifications.'+(ok&&!hasDemo()?'':' <a href="#" data-a="setupSkip">Masquer ce bloc</a>')+'</div></div>'+base;
+};
+
+{const st=document.createElement('style');st.textContent='.sendbox .btn{width:100%;white-space:normal;text-align:center;box-sizing:border-box;justify-content:center}';document.head.appendChild(st)}
+PX.aujourdhui=pToday;
 window.CG={S,A,save,del,metrics,impayes,tresorerie,totals,chantierFin,fStatut,resteOf,paidOf,dStatut,rangeOf,devisStats,loadDemo,clearDemo,render,ui,nextNum,pdf,csvOf,toFacture,groupedLines,dTot,fTot,attente,relanceInfo,mkChantier,D_:null};
 applyTheme(); const h0=location.hash.slice(1); if(PAGES.some(p=>p[0]===h0))ui.page=h0;
 render(); initData();
