@@ -1,0 +1,2 @@
+{ "buildCommand": "node build.js", "outputDirectory": "public", "framework": null,
+  "headers": [{ "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }] }
