@@ -383,7 +383,7 @@ const PAGES=[['tableau-de-bord','Tableau de bord','home','Pilotage'],['objectifs
 const PX={}, PXA={};
 const BN=['aujourdhui','devis','chantiers','factures'];
 const SIMPLE=['aujourdhui','tableau-de-bord','clients','devis','chantiers','planning','factures','parametres'];
-const visPages=()=>PAGES.filter(p=>!S.cfg.simple||SIMPLE.includes(p[0])||p[0]===ui.page);
+let visPages=()=>PAGES.filter(p=>!S.cfg.simple||SIMPLE.includes(p[0])||p[0]===ui.page);
 const LOGO='<svg width="34" height="34" viewBox="0 0 48 48" aria-hidden="true"><g stroke="#F7F4EC" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M22 19C13 17 5 25 5.5 40.5 14 40 22 33 23 24Z" fill="#CDEEF1" fill-opacity=".25"/><path d="M26 19C35 17 43 25 42.5 40.5 34 40 26 33 25 24Z" fill="#CDEEF1" fill-opacity=".25"/><path d="M20 25C20 32 22 38 24 40.5 26 38 28 32 28 25Z" fill="#2FB5C2"/><ellipse cx="24" cy="21" rx="5.8" ry="5.2" fill="#2FB5C2"/><path d="M15.5 11.5C15.5 9.5 19 8 24 8S32.5 9.5 32.5 11.5 29 15.5 24 15.5 15.5 13.5 15.5 11.5Z" fill="#2FB5C2"/></g><circle cx="16.5" cy="11.6" r="2.6" fill="#F7F4EC"/><circle cx="31.5" cy="11.6" r="2.6" fill="#F7F4EC"/></svg>';
 const T={}; // registre des tableaux
 const charts=[];
@@ -1796,6 +1796,25 @@ const _pt11=pToday; pToday=function(){
 {const st=document.createElement('style');st.textContent='.sendbox .btn{width:100%;white-space:normal;text-align:center;box-sizing:border-box;justify-content:center}';document.head.appendChild(st)}
 PX.aujourdhui=pToday;
 window.CG={S,A,save,del,metrics,impayes,tresorerie,totals,chantierFin,fStatut,resteOf,paidOf,dStatut,rangeOf,devisStats,loadDemo,clearDemo,render,ui,nextNum,pdf,csvOf,toFacture,groupedLines,dTot,fTot,attente,relanceInfo,mkChantier,D_:null};
+/* ===== Menu simplifié : onglets par thème + bouton + global ===== */
+const GROUPS={clients:[['clients','Clients'],['pipeline','Prospects'],['relances','Relances'],['entretiens','Entretiens']],
+ chantiers:[['chantiers','Chantiers'],['planning','Planning'],['interventions','Interventions'],['parc','Parc installé'],['commandes','Commandes']],
+ 'tableau-de-bord':[['tableau-de-bord','Tableau de bord'],['objectifs','Objectifs']],
+ factures:[['factures','Factures'],['depenses','Dépenses'],['finance','Trésorerie et TVA']]};
+const HEAD={}; Object.entries(GROUPS).forEach(([h,a])=>a.forEach(x=>HEAD[x[0]]=h));
+const MENU=['aujourdhui','clients','devis','chantiers','factures','tableau-de-bord','marketing','parametres'];
+visPages=()=>PAGES.filter(p=>MENU.includes(p[0])&&(!S.cfg.simple||p[0]!=='marketing'));
+{const st=document.createElement('style');st.textContent='.tabs{display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;margin:0 -2px;-webkit-overflow-scrolling:touch}.tabs a{flex:none;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);text-decoration:none;font-size:14px;font-weight:600;white-space:nowrap}.tabs a[aria-current="page"]{background:var(--accent);color:#fff;border-color:var(--accent)}.tabs .cnt{margin-left:6px;background:#d33;color:#fff;border-radius:99px;padding:0 6px;font-size:11px}.fab{position:fixed;right:16px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:30;width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;cursor:pointer}.fab svg{width:26px;height:26px}@media(min-width:861px){.fab{bottom:24px;right:24px}}.qbox{display:grid;gap:8px}.qbox .btn{width:100%;justify-content:flex-start;padding:14px}';document.head.appendChild(st)}
+{const old=render;render=function(){old();
+ const h=HEAD[ui.page], g=GROUPS[h];
+ if(g){const c=counts();$('#view').insertAdjacentHTML('afterbegin',`<nav class="tabs" aria-label="Sections">${g.map(([k,l])=>`<a href="#${k}"${k===ui.page?' aria-current="page"':''}>${l}${k==='relances'&&c.rel?`<span class="cnt">${c.rel}</span>`:''}</a>`).join('')}</nav>`)}
+ if(h){$$('#side .nav a').forEach(a=>{a.removeAttribute('aria-current');if(a.getAttribute('href')==='#'+h)a.setAttribute('aria-current','page')});
+  $$('#bnav a').forEach(a=>{a.removeAttribute('aria-current');if(a.getAttribute('href')==='#'+h)a.setAttribute('aria-current','page')});
+  const m=$('#bnav button');if(m&&BN.includes(h))m.removeAttribute('aria-current')}
+ if(!$('#fab')){document.body.insertAdjacentHTML('beforeend',`<button class="fab" id="fab" data-a="quick" aria-label="Ajouter">${I('plus',26)}</button>`)}
+};}
+A.quick=()=>modal('Ajouter',`<div class="qbox"><button class="btn pri" data-a="quickGo" data-k="newDevis">${S.cfg.devisExterne?'Noter un devis':'Nouveau devis'}</button><button class="btn" data-a="quickGo" data-k="newClient">Nouveau client</button><button class="btn" data-a="quickGo" data-k="newTache">Nouvelle tâche</button><button class="btn" data-a="quickGo" data-k="photoDep">Photo d’un ticket (dépense)</button><button class="btn" data-a="quickGo" data-k="newFacture">Noter une facture</button><button class="btn" data-a="quickGo" data-k="newChantier">Nouveau chantier</button></div>`,'<button class="btn" data-a="close">Fermer</button>');
+A.quickGo=d=>{closeModal();setTimeout(()=>{if(d.k==='photoDep'){depenseForm({libelle:'Ticket '+fdate(today())});setTimeout(()=>{const f=$('#jf-file');if(f){f.setAttribute('capture','environment');f.click()}},250)}else A[d.k]({})},60)};
 applyTheme(); const h0=location.hash.slice(1); if(PAGES.some(p=>p[0]===h0))ui.page=h0;
 render(); initData();
 </script>
