@@ -1677,7 +1677,7 @@ Object.assign(A,{
  tacheLater:d=>{const x=S.taches.find(y=>y.id===d.id),b=x.echeance&&x.echeance>today()?x.echeance:today();save('taches',{...x,echeance:addDays(b,1)});render()}
 });
 /* ===== Devis faits dans le logiciel externe (Costructor) : l'appli les note et les suit ===== */
-DEF.devisExterne=false; DEF.logiciel='Costructor'; if(S.cfg.devisExterne===undefined)S.cfg.devisExterne=false; if(S.cfg.logiciel===undefined)S.cfg.logiciel='Costructor';
+DEF.devisExterne=false; DEF.logiciel='Odoo'; if(S.cfg.devisExterne===undefined)S.cfg.devisExterne=false; if(S.cfg.logiciel===undefined)S.cfg.logiciel='Odoo';
 const _df=devisForm; devisForm=function(d){
   if(!S.cfg.devisExterne||(d.id&&!d.ext))return _df(d);
   const isNew=!d.id; if(isNew)d={clientId:d.clientId||'',date:today(),validite:addDays(today(),+S.cfg.validiteJ||30),statut:'Envoyé',type:'Installation clim',ext:true,...d};
