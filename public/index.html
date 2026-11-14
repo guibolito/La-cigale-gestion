@@ -1825,6 +1825,31 @@ A.quick=()=>modal('Ajouter',`<div class="qbox"><button class="btn pri" data-a="q
 A.quickGo=d=>{closeModal();setTimeout(()=>{if(d.k==='photoDep'){depenseForm({libelle:'Ticket '+fdate(today())});setTimeout(()=>{const f=$('#jf-file');if(f){f.setAttribute('capture','environment');f.click()}},250)}else A[d.k]({})},60)};
 A.togFlt=(d,el)=>{const t=el.closest('.tools');t.classList.toggle('open');el.textContent=t.classList.contains('open')?'Masquer les filtres':'Filtres et tri'};
 {const _r=render;render=function(){_r();$$('.tools').forEach(t=>{if(!t.querySelector('select')||t.querySelector('.fbtn'))return;const q=t.querySelector('input[type=search]');const b='<button class="btn sm fbtn" data-a="togFlt" type="button">Filtres et tri</button>';q?q.insertAdjacentHTML('afterend',b):t.insertAdjacentHTML('afterbegin',b)})}}
+/* ===== Copier un devis / une facture vers Costructor, sans erreur ===== */
+const COSURL=()=>S.cfg.logicielUrl||'https://www.costructor.co';
+const nfr=n=>(+n||0).toFixed(2).replace('.',',');
+A.cpv=async(d,el)=>{const v=el.dataset.v||'';try{await navigator.clipboard.writeText(v);toast('Copié : '+(v.length>28?v.slice(0,28)+'…':v))}catch{const t=document.createElement('textarea');t.value=v;document.body.appendChild(t);t.select();try{document.execCommand('copy');toast('Copié.')}catch{}t.remove()}};
+A.cosOpen=(d)=>{
+  const doc=d.k==='f'?S.factures.find(x=>x.id===d.id):S.devis.find(x=>x.id===d.id); if(!doc){toast('Enregistrez d’abord le document.');return}
+  const c=cli(doc.clientId)||{}, ls=(doc.lignes||[]).filter(l=>l&&(l.d||+l.pu)), T=totals(doc.lignes), fr=S.cfg.regimeTva==='franchise';
+  const btn=(v,t,cls='')=>`<button type="button" class="btn sm ${cls}" data-a="cpv" data-v="${esc(v)}" style="white-space:normal;text-align:left;justify-content:flex-start">${t}</button>`;
+  const rows=ls.map((l,i)=>{const t=lt(l);return `<div class="card pad" style="margin:0 0 8px;padding:10px 12px"><div class="muted mini">Ligne ${i+1}</div>
+   <div style="margin:4px 0">${btn(l.d||'',esc(l.d||'—'),'')}</div>
+   <div class="row" style="gap:6px;flex-wrap:wrap">${btn(String(+l.q||0).replace('.',','),'Qté '+(+l.q||0))}${btn(nfr(l.pu),'PU HT '+nfr(l.pu)+' €')}${fr?'<span class="muted mini">TVA non applicable</span>':btn(String(+l.tva||0).replace('.',','),'TVA '+(+l.tva||0)+' %')}<span class="sp"></span><b>${eur(t.ht)} HT</b></div></div>`}).join('');
+  const all=ls.map((l,i)=>`${i+1}. ${l.d||''} | Qté ${+l.q||0} | PU HT ${nfr(l.pu)} € | ${fr?'TVA non applicable':'TVA '+(+l.tva||0)+' %'} | Total HT ${nfr(lt(l).ht)} €`).join('\n')+`\nTotal HT ${nfr(T.ht)} € | TVA ${nfr(T.tva)} € | Total TTC ${nfr(T.ttc)} €`;
+  window.__cosT=T.ttc;
+  modal('Copier vers Costructor',`<div class="alert info" style="margin-bottom:10px"><span>Touchez un champ pour le copier, collez-le dans Costructor, puis vérifiez le total à la fin.</span></div>
+  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px"><a class="btn pri" href="${esc(COSURL())}" target="_blank" rel="noopener">Ouvrir Costructor</a>${btn(all,'Tout copier')}${btn(c.nom||'','Client : '+esc(c.nom||'—'))}${doc.titre?btn(doc.titre,'Objet : '+esc(doc.titre)):''}</div>
+  ${rows||'<div class="muted">Aucune ligne.</div>'}
+  <div class="card pad" style="background:var(--surface2);margin-top:10px"><div class="row"><span>Total HT</span><span class="sp"></span><b>${eur(T.ht)}</b></div><div class="row"><span>TVA</span><span class="sp"></span><b>${fr?'non applicable':eur(T.tva)}</b></div><div class="row"><span>Total TTC</span><span class="sp"></span><b style="font-size:19px">${eur(T.ttc)}</b></div></div>
+  <div class="card pad" style="margin-top:10px"><b>Contrôle</b><div class="muted mini" style="margin:2px 0 6px">Tapez le total TTC affiché dans Costructor :</div><input id="cos-chk" inputmode="decimal" placeholder="Ex. ${nfr(T.ttc)}" style="width:100%"><div id="cos-res" style="margin-top:8px;font-weight:700"></div></div>`,'<button class="btn" data-a="close">Fermer</button>');
+};
+document.addEventListener('input',e=>{if(e.target.id!=='cos-chk')return;const v=parseFloat(String(e.target.value).replace(/\s/g,'').replace(',','.')),r=$('#cos-res');if(!r)return;if(isNaN(v)){r.textContent='';return}const ec=r2(v-window.__cosT);r.innerHTML=Math.abs(ec)<0.005?'<span style="color:#1a8a4a">✓ Identique, c’est bon.</span>':'<span style="color:#c0392b">✗ Écart de '+eur(ec)+' : vérifiez les lignes, les quantités et la TVA.</span>'});
+(function(){let t=0;const chk=()=>{t=0;try{
+  const dup=document.querySelector('[data-a="dupDevis"]');if(dup&&!document.querySelector('.mod-cos'))dup.insertAdjacentHTML('beforebegin','<button class="btn mod-cos" data-a="cosOpen" data-k="d" data-id="'+dup.dataset.id+'">Copier vers Costructor</button>');
+  const pf=document.querySelector('[data-a="pdfFacture"]');if(pf&&!document.querySelector('.mod-cos'))pf.insertAdjacentHTML('beforebegin','<button class="btn mod-cos" data-a="cosOpen" data-k="f" data-id="'+pf.dataset.id+'">Copier vers Costructor</button>');
+ }catch(e){console.error(e)}};
+ new MutationObserver(()=>{if(!t)t=setTimeout(chk,40)}).observe(document.body,{childList:true,subtree:true})})();
 applyTheme(); const h0=location.hash.slice(1); if(PAGES.some(p=>p[0]===h0))ui.page=h0;
 render(); initData();
 </script>
