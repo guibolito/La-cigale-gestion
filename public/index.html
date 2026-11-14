@@ -246,21 +246,17 @@ const DOMAINES=['Climatisation','Pompe à chaleur','Chaudière / chauffage','Cha
 const SOURCES=['Bouche-à-oreille','Google / fiche Google','Site web','Instagram / Facebook','Flyers / cartes','Agence / conciergerie','Syndic','Partenaire','Autre'];
 const CLIENT_TYPES=[['particulier','Particulier'],['pro','Professionnel'],['syndic','Syndic'],['autre','Autre']];
 const MODES=['Virement','Carte bancaire','Chèque','Espèces','Prélèvement','Autre'];
-const FORMULES={Essentiel:110,Confort:125,Sérénité:140};
+const FORMULES={'Unité intérieure':100,'Unité int. + ext.':160,'Unité extérieure':80}, FCODE={'Unité intérieure':'ENT1','Unité int. + ext.':'ENT2','Unité extérieure':'ENT3'}, FOLD={Essentiel:'Unité int. + ext.',Confort:'Unité int. + ext.','Sérénité':'Unité int. + ext.'};
 /* Catalogue : [code, catégorie, libellé, prix HT, coût matière HT, heures, TVA %] (repris du fichier de pilotage) */
 const CAT0=[
-['ENT1','Entretien clim','Entretien clim Essentiel (1 clim, int. + ext.)',110,6,1.25,10],['ENT2','Entretien clim','Entretien clim Confort (1 clim, int. + ext.)',125,10,1.5,10],['ENT3','Entretien clim','Entretien clim Sérénité (1 clim, int. + ext.)',140,12,1.75,10],
-['ENT4','Entretien clim','Entretien unité intérieure seule',85,4,1,10],['ENT5','Entretien clim','Entretien groupe extérieur seul',55,3,0.75,10],
+['ENT1','Entretien clim','Entretien clim : unité intérieure',100,4,1,0],['ENT2','Entretien clim','Entretien clim : unité intérieure + extérieure',160,8,1.75,0],['ENT3','Entretien clim','Entretien clim : unité extérieure',80,4,0.75,0],
+['ENT4','Entretien clim','Entretien clim : unité supplémentaire',60,3,0.75,0],
 ['CL01','Installation clim','Installation clim mono-split',1800,950,8,10],['CL02','Installation clim','Installation clim multi-split (3 unités)',5500,3200,20,10],
 ['CL03','Installation clim','Installation PAC air-air (maison, multi-split)',7500,4200,24,10],['CL04','Installation clim','Installation PAC air-eau',13000,7500,40,10],
 ['CL05','Dépannage clim','Dépannage clim / chauffage',200,25,1.5,10],['CL06','Dépannage clim','Recherche de fuite (détection)',220,20,2,10],
 ['EL01','Électricité','Dépannage électrique simple (prise, interrupteur, luminaire)',180,15,1,10],['EL02','Électricité','Recherche de panne / diagnostic',150,5,1.5,10],
 ['EL03','Électricité','Remplacement tableau électrique',1200,350,8,10],['EL04','Électricité','Mise aux normes tableau (partielle)',900,250,6,10],
 ['EL05','Électricité','Installation borne de recharge (IRVE)',1300,650,6,20],['EL06','Électricité','Rénovation électrique studio (30 m²)',4000,1200,40,10],['EL07','Électricité','Rénovation électrique appartement (70 m²)',7000,2000,70,10],
-['PL01','Plomberie','Dépannage fuite simple (joint, mitigeur)',120,15,1,10],['PL02','Plomberie','Débouchage canalisation (furet électrique)',150,10,1.5,10],
-['PL03','Plomberie','Remplacement mitigeur évier / lavabo',180,60,1.5,10],['PL04','Plomberie','Remplacement WC complet',400,180,3,10],
-['PL05','Plomberie','Installation chauffe-eau électrique',650,350,4,10],['PL06','Plomberie','Remplacement ballon eau chaude (200 L)',900,500,5,10],
-['PL07','Plomberie','Installation plomberie salle de bain complète',4200,1800,24,10],
 ['RN01','Rénovation','Peinture pièce complète 2 couches + préparation (≈ 20 m²)',650,120,8,10],['RN02','Rénovation','Pose cloison placo simple (≈ 10 m²)',700,250,8,10],
 ['RN03','Rénovation','Pose revêtement sol stratifié / vinyle (≈ 20 m²)',650,300,5,10],['DV01','Autre','Fourniture et pose de matériel (au réel)',0,0,0,20],['DV02','Autre','Déplacement',40,0,0.5,20],
 ['IR01','IRVE','Borne de recharge 7,4 kW fournie et posée (monophasé), prix indicatif',1500,750,5,10],['IR02','IRVE','Borne de recharge 11 kW fournie et posée (triphasé), prix indicatif',1900,1000,6,10],['IR03','IRVE','Ligne dédiée + protection différentielle (jusqu’à 15 m), prix indicatif',450,120,3,10],
@@ -861,10 +857,10 @@ function loadDemo(){
   if(S.clients.some(x=>x.demo)){toast('Les données fictives sont déjà chargées.');return}
   const ago=n=>addDays(today(),-n), cat=c=>catalogue().find(x=>x.code===c)||CAT0.find(x=>x.code===c);
   const L=(code,q=1)=>{const k=cat(code);return {d:k.lib,q,pu:k.pu,tva:k.tva,c:k.cout,h:k.h}};
-  const cl=[['Martine Rossi','particulier','Hyères','83400','Bouche-à-oreille','Confort'],['Jean-Paul Marchetti','particulier','Giens','83400','Google / fiche Google','Sérénité'],['Boulangerie Ruiz','pro','La Londe-les-Maures','83250','Flyers / cartes',''],['Agence Riviera Immo','pro','Hyères','83400','Agence / conciergerie',''],['Syndic Les Oliviers','syndic','Hyères','83400','Syndic',''],['Camille Lefèvre','particulier','Carqueiranne','83320','Instagram / Facebook',''],['Conciergerie Azur Locations','pro','Hyères','83400','Agence / conciergerie','Sérénité'],['Thomas Giraud','particulier','Le Pradet','83220','Site web',''],['Famille Benoît','particulier','La Crau','83260','Bouche-à-oreille',''],['Hôtel Les Pins','pro','Toulon','83200','Partenaire','Confort']]
+  const cl=[['Martine Rossi','particulier','Hyères','83400','Bouche-à-oreille','Unité int. + ext.'],['Jean-Paul Marchetti','particulier','Giens','83400','Google / fiche Google','Unité int. + ext.'],['Boulangerie Ruiz','pro','La Londe-les-Maures','83250','Flyers / cartes',''],['Agence Riviera Immo','pro','Hyères','83400','Agence / conciergerie',''],['Syndic Les Oliviers','syndic','Hyères','83400','Syndic',''],['Camille Lefèvre','particulier','Carqueiranne','83320','Instagram / Facebook',''],['Conciergerie Azur Locations','pro','Hyères','83400','Agence / conciergerie','Unité int. + ext.'],['Thomas Giraud','particulier','Le Pradet','83220','Site web',''],['Famille Benoît','particulier','La Crau','83260','Bouche-à-oreille',''],['Hôtel Les Pins','pro','Toulon','83200','Partenaire','Unité int. + ext.']]
    .map((a,i)=>save('clients',{id:uid(),nom:a[0],type:a[1],ville:a[2],cp:a[3],source:a[4],tel:'06 '+pad(10+i*7)+' '+pad(20+i*5)+' '+pad(30+i*3)+' '+pad(40+i)+'',email:a[0].toLowerCase().replace(/[^a-z]+/g,'.').replace(/^\.|\.$/g,'')+'@exemple.fr',adresse:(3+i*4)+' rue des Palmiers',entretien:a[5]?{formule:a[5],unites:a[5]==='Sérénité'?3:1,prochaine:addDays(today(),10+i*9)}:{},notes:'',demo:true}));
   const dv=(ci,type,titre,lignes,statut,a,extra={})=>{const d={id:uid(),clientId:cl[ci].id,type,titre,lignes,statut,date:ago(a),validite:addDays(ago(a),30),conditions:S.cfg.conditions,demo:true,...extra};d.num=nextNum('devis',S.cfg.pDevis,d.date);if(statut!=='Brouillon')d.dateEnvoi=addDays(d.date,1);if(statut==='Accepté')d.dateAcceptation=addDays(d.date,4);save('devis',d);return d};
-  const specs=[[5,'Installation clim','Climatisation salon et chambre',[L('CL01',2)],'Accepté',150],[2,'Installation clim','Multi-split boulangerie',[L('CL02')],'Accepté',130],[7,'Installation clim','Multi-split 3 pièces',[L('CL02')],'Refusé',115],[7,'Électricité','Remplacement du tableau électrique',[L('EL03')],'Accepté',108],[8,'Installation clim','PAC air-air maison',[L('CL03')],'Accepté',85],[8,'Plomberie','Salle de bain complète',[L('PL07')],'Refusé',70],[5,'Électricité','Rénovation électrique appartement',[L('EL07')],'Refusé',55],[1,'Plomberie','Chauffe-eau et dépannage',[L('PL05'),L('PL01')],'Accepté',45],[9,'Électricité','Rénovation électrique studio',[L('EL06')],'Accepté',33],[3,'Installation clim','Clim agence',[L('CL01')],'Accepté',22],[4,'Électricité','Mise aux normes tableau',[L('EL04')],'Accepté',14],[9,'Installation clim','PAC air-eau',[L('CL04')],'En attente',26],[6,'Entretien clim','Entretien annuel 4 clims',[L('ENT3',4)],'Envoyé',12],[2,'Plomberie','Remplacement ballon eau chaude',[L('PL06')],'Envoyé',8],[1,'Installation clim','Clim chambre d’amis',[L('CL01')],'Brouillon',2]];
+  const specs=[[5,'Installation clim','Climatisation salon et chambre',[L('CL01',2)],'Accepté',150],[2,'Installation clim','Multi-split boulangerie',[L('CL02')],'Accepté',130],[7,'Installation clim','Multi-split 3 pièces',[L('CL02')],'Refusé',115],[7,'Électricité','Remplacement du tableau électrique',[L('EL03')],'Accepté',108],[8,'Installation clim','PAC air-air maison',[L('CL03')],'Accepté',85],[8,'Électricité','Mise aux normes du tableau',[L('EL04')],'Refusé',70],[5,'Électricité','Rénovation électrique appartement',[L('EL07')],'Refusé',55],[1,'Électricité','Diagnostic et dépannage',[L('EL02'),L('EL01')],'Accepté',45],[9,'Électricité','Rénovation électrique studio',[L('EL06')],'Accepté',33],[3,'Installation clim','Clim agence',[L('CL01')],'Accepté',22],[4,'Électricité','Mise aux normes tableau',[L('EL04')],'Accepté',14],[9,'Installation clim','PAC air-eau',[L('CL04')],'En attente',26],[6,'Entretien clim','Entretien annuel 4 clims',[L('ENT2',4)],'Envoyé',12],[2,'Électricité','Remplacement du tableau',[L('EL03')],'Envoyé',8],[1,'Installation clim','Clim chambre d’amis',[L('CL01')],'Brouillon',2]];
   const D_=specs.map(s=>dv(...s)); const acc=D_.filter(d=>d.statut==='Accepté');
   const chs=acc.map((d,i)=>{const ch=mkChantier(d);ch.demo=true;const st=['Terminé','Terminé','Terminé','Terminé','En cours','En cours','À planifier','À planifier'][i];ch.statut=st;const h=[16,24,9,28,5,20,0,0][i];ch.heures=h;const a0=[145,122,100,78,40,30,0,0][i];if(a0){ch.debut=ago(a0);ch.finPrevue=addDays(ch.debut,3)}if(st==='Terminé')ch.finReelle=addDays(ch.debut,3);save('chantiers',ch);return ch});
   const dep=(lib,c,f,a,ht,ch,payee=true,tvat=20)=>save('depenses',{id:uid(),libelle:lib,categorie:c,fournisseur:f,date:ago(a),ht,tvaT:tvat,ttc:r2(ht*(1+tvat/100)),mode:'Carte bancaire',payee,chantierId:ch?chs[ch-1].id:'',justif:'',demo:true});
@@ -883,7 +879,7 @@ function loadDemo(){
   const F8=fa(D_[12],null,[L('ENT2')],65,{type:'Entretien clim',clientId:cl[0].id});pay(F8,fTot(F8).ttc,60,'Carte bancaire');
   const F4=fa(acc[3],chs[3],acc[3].lignes.map(l=>({...l})),50);
   const F5=fa(acc[4],chs[4],groupedLines(acc[4],.3,'Acompte 30 % sur devis '+acc[4].num),38,{acompte:true});pay(F5,fTot(F5).ttc,33);
-  const F9=fa(D_[12],null,[L('ENT3',4)],35,{type:'Entretien clim',clientId:cl[6].id});pay(F9,fTot(F9).ttc,22);
+  const F9=fa(D_[12],null,[L('ENT2',4)],35,{type:'Entretien clim',clientId:cl[6].id});pay(F9,fTot(F9).ttc,22);
   const F6=fa(acc[5],chs[5],groupedLines(acc[5],.3,'Acompte 30 % sur devis '+acc[5].num),32,{acompte:true,echeance:addDays(ago(32),15)});
   const F10=fa(D_[12],null,[L('ENT2')],12,{type:'Entretien clim',clientId:cl[9].id});
   demoCRM(cl); render(); toast('Données fictives chargées : clients, devis, chantiers, factures, dépenses, prospects, campagnes et charges.');
@@ -1141,7 +1137,7 @@ Object.assign(A,{
    save('clients',{...c,avisDemande:today()});try{await navigator.clipboard.writeText(t);toast('Message copié.')}catch{modal('Message à copier',`<textarea id="cp-t" rows="6" readonly>${esc(t)}</textarea>`,'<button class="btn pri" data-a="close">Fermer</button>',{s:1})}render()}
 });
 /* ---- Entretiens ---- */
-const entPrix=c=>{const e=c.entretien||{};if(+e.prixAn)return +e.prixAn;const k=catalogue().find(x=>x.code==={Essentiel:'ENT1',Confort:'ENT2','Sérénité':'ENT3'}[e.formule]);return (k?k.pu:FORMULES[e.formule]||0)*(+e.unites||1)};
+const entPrix=c=>{const e=c.entretien||{};if(+e.prixAn)return +e.prixAn;const k=catalogue().find(x=>x.code===FCODE[e.formule]),x=catalogue().find(y=>y.code==='ENT4'),n=Math.max(1,+e.unites||1);return (k?k.pu:FORMULES[e.formule]||0)+(n-1)*(x?x.pu:60)};
 PX.entretiens=function(){
   const cs=S.clients.filter(c=>c.entretien&&c.entretien.formule), t=today();
   const rec=sum(cs,entPrix), due=cs.filter(c=>c.entretien.prochaine&&c.entretien.prochaine<=addDays(t,30)), lt=cs.filter(c=>late(c.entretien.prochaine));
@@ -1151,7 +1147,7 @@ PX.entretiens=function(){
 };
 Object.assign(A,{
  entFait:d=>{const c=cli(d.id);confirmBox(`Visite d’entretien faite chez ${esc(c.nom)} ? La prochaine visite sera fixée dans 12 mois.`,()=>{save('clients',{...c,entretien:{...c.entretien,prochaine:addMonths(today(),12)}});save('interactions',{id:uid(),ref:'c',refId:c.id,type:'Visite',date:today(),note:'Entretien annuel réalisé'});render();toast('Prochaine visite : '+fdate(addMonths(today(),12)))},'Confirmer')},
- entFacture:d=>{const c=cli(d.id),code={Essentiel:'ENT1',Confort:'ENT2','Sérénité':'ENT3'}[c.entretien.formule],k=catalogue().find(x=>x.code===code),dom=c.entretien.domaine||'Climatisation';factureForm({clientId:c.id,type:dom==='Climatisation'?'Entretien clim':'Autre',lignes:k&&!(+c.entretien.prixAn)?[newLine(k)].map(l=>({...l,q:+c.entretien.unites||1})):[{d:'Contrat d’entretien '+dom,q:1,pu:+c.entretien.prixAn||0,tva:10,c:0,h:0}]})}
+ entFacture:d=>{const c=cli(d.id),k=catalogue().find(x=>x.code===FCODE[c.entretien.formule]),x=catalogue().find(y=>y.code==='ENT4'),n=Math.max(1,+c.entretien.unites||1),dom=c.entretien.domaine||'Climatisation';factureForm({clientId:c.id,type:dom==='Climatisation'?'Entretien clim':'Autre',lignes:k&&!(+c.entretien.prixAn)?[{...newLine(k),q:1},...(n>1&&x?[{...newLine(x),q:n-1}]:[])]:[{d:'Contrat d’entretien '+dom,q:1,pu:+c.entretien.prixAn||0,tva:0,c:0,h:0}]})},
 });
 /* ---- Trésorerie, TVA ---- */
 function recMonth(r,ym){return r.actif!==false&&S.depenses.some(x=>x.recId===r.id&&x.date.startsWith(ym))}
@@ -1976,6 +1972,13 @@ Object.assign(A,{
  estDel:d=>confirmBox('Supprimer cette note d’estimation ?',()=>{del('estimations',d.id);closeModal();render()},'Supprimer')
 });
 
+
+/* ===== Cohérence : formules d'entretien et coordonnées ===== */
+function migCoh(){
+  S.clients.forEach(c=>{const f=c.entretien&&c.entretien.formule;if(f&&FOLD[f])save('clients',{...c,entretien:{...c.entretien,formule:FOLD[f]}})});
+  let ch=false;if(!S.cfg.tel){S.cfg.tel='06 45 40 01 57';ch=true}if(!S.cfg.adresse){S.cfg.adresse='Var et alentours';ch=true}if(ch)saveCfg();
+}
+{const old=render;render=function(){if(loaded)try{migCoh()}catch(e){}old()}}
 </script>
 
 <script>if("serviceWorker"in navigator&&location.protocol!=="file:")addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))</script></html>
