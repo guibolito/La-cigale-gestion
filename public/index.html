@@ -239,9 +239,9 @@ const I=(n,s)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 
 /* ============ Réglages par défaut ============ */
 const CATS_DEP=['Matériel','Fournitures','Outillage','Carburant','Véhicule','Entretien véhicule','Assurance professionnelle','Assurance véhicule','Téléphone','Logiciels et abonnements','Comptabilité','Frais bancaires','Publicité','Sous-traitance','Autres frais'];
-const TYPES=['Installation clim','Entretien clim','Dépannage clim','Électricité','Plomberie','Chauffage','IRVE (borne de recharge)','Panneaux solaires','Rénovation','Autre'];
+const TYPES=['Installation clim','Entretien clim','Dépannage clim','Dépannage électrique','Électricité','Portail et automatisme','Domotique et sécurité','Ventilation VMC','Chauffage et eau chaude','IRVE (borne de recharge)','Panneaux solaires','Plomberie','Rénovation','Autre'];
 const ACTIVITES=['Climatisation','Électricité','Plomberie','Chauffage','IRVE (borne de recharge)','Panneaux solaires','Rénovation'];
-const ACT_OF={'Installation clim':'Climatisation','Entretien clim':'Climatisation','Dépannage clim':'Climatisation','Électricité':'Électricité','Plomberie':'Plomberie','Chauffage':'Chauffage','IRVE (borne de recharge)':'IRVE (borne de recharge)','Panneaux solaires':'Panneaux solaires','Rénovation':'Rénovation'};
+const ACT_OF={'Dépannage électrique':'Électricité','Portail et automatisme':'Électricité','Domotique et sécurité':'Électricité','Ventilation VMC':'Électricité','Chauffage et eau chaude':'Chauffage','Installation clim':'Climatisation','Entretien clim':'Climatisation','Dépannage clim':'Climatisation','Électricité':'Électricité','Plomberie':'Plomberie','Chauffage':'Chauffage','IRVE (borne de recharge)':'IRVE (borne de recharge)','Panneaux solaires':'Panneaux solaires','Rénovation':'Rénovation'};
 const DOMAINES=['Climatisation','Pompe à chaleur','Chaudière / chauffage','Chauffe-eau / plomberie','VMC','Électricité (contrôle)','Panneaux solaires','Borne IRVE','Autre'];
 const SOURCES=['Bouche-à-oreille','Google / fiche Google','Site web','Instagram / Facebook','Flyers / cartes','Agence / conciergerie','Syndic','Partenaire','Autre'];
 const CLIENT_TYPES=[['particulier','Particulier'],['pro','Professionnel'],['syndic','Syndic'],['autre','Autre']];
@@ -1325,12 +1325,18 @@ function impDocs(R){
 }
 function impType(L){
   const t=norm(L.map(l=>l.d).join(' ')); const m=(r)=>r.test(t);
-  if(m(/entretien|maintenance|nettoyage|contr[oô]le annuel|contrat/))return 'Entretien clim';
-  if(m(/d[ée]pannage|r[ée]paration|recherche de fuite|diagnostic|recharge/))return 'Dépannage clim';
-  if(m(/borne|irve|wallbox|recharge v[ée]hicule/))return 'IRVE (borne de recharge)';
-  if(m(/photovolta|panneau|onduleur|solaire/))return 'Panneaux solaires';
-  if(m(/clim|split|climatis|unit[ée] (int|ext)|groupe ext|pompe [àa] chaleur|pac /))return 'Installation clim';
-  if(m(/[ée]lectri|tableau|prise|disjoncteur|c[âa]ble|mise aux normes|consuel|portail|interphone/))return 'Électricité';
+  if(m(/entretien|maintenance|nettoyage|controle annuel|contrat/))return 'Entretien clim';
+  if(m(/portail|portillon|motorisation|automatisme|interphone|visiophone|gache|digicode|porte de garage|volet roulant/))return 'Portail et automatisme';
+  if(m(/borne|irve|wallbox|recharge vehicule|recharge electrique/))return 'IRVE (borne de recharge)';
+  if(m(/photovolta|panneau|onduleur|solaire|autoconsommation|batterie de stockage/))return 'Panneaux solaires';
+  if(m(/alarme|videosurveillance|camera|domotique|detecteur|connecte|thermostat|serrure/))return 'Domotique et securite'.replace('securite','sécurité');
+  if(m(/vmc|ventilation|aeration|extracteur/))return 'Ventilation VMC';
+  if(m(/chauffe.?eau|ballon|cumulus|radiateur|plancher chauffant|chauffage|convecteur|seche.?serviette|chaudiere/))return 'Chauffage et eau chaude';
+  if(m(/depannage|reparation|recherche de (fuite|panne)|diagnostic|recharge en fluide|recharge gaz/))return m(/clim|split|fluide|gaz|unite/)?'Dépannage clim':'Dépannage électrique';
+  if(m(/clim|split|climatis|unite (int|ext)|groupe ext|pompe a chaleur|\bpac\b|gainable|cassette|multi.?split/))return 'Installation clim';
+  if(m(/electri|tableau|prise|interrupteur|disjoncteur|differentiel|cable|gaine|mise aux normes|consuel|eclairage|spot|luminaire|point lumineux|ligne dediee|raccordement|compteur|terre|parafoudre/))return 'Électricité';
+  if(m(/plomberie|sanitaire|robinet|wc|lavabo|douche/))return 'Plomberie';
+  if(m(/renovation|peinture|placo|carrelage|maconnerie/))return 'Rénovation';
   return 'Autre';
 }
 function impBuild(d,label){
