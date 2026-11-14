@@ -1323,6 +1323,16 @@ function impDocs(R){
     if(cur&&(g('lp')||g('ld')||g('lu')!==''))cur.lines.push({p:g('lp'),d:g('ld'),q:numFr(g('lq'))||1,u:numFr(g('lu')),r:numFr(g('lr'))})});
   return {kind,docs};
 }
+function impType(L){
+  const t=norm(L.map(l=>l.d).join(' ')); const m=(r)=>r.test(t);
+  if(m(/entretien|maintenance|nettoyage|contr[oô]le annuel|contrat/))return 'Entretien clim';
+  if(m(/d[ée]pannage|r[ée]paration|recherche de fuite|diagnostic|recharge/))return 'Dépannage clim';
+  if(m(/borne|irve|wallbox|recharge v[ée]hicule/))return 'IRVE (borne de recharge)';
+  if(m(/photovolta|panneau|onduleur|solaire/))return 'Panneaux solaires';
+  if(m(/clim|split|climatis|unit[ée] (int|ext)|groupe ext|pompe [àa] chaleur|pac /))return 'Installation clim';
+  if(m(/[ée]lectri|tableau|prise|disjoncteur|c[âa]ble|mise aux normes|consuel|portail|interphone/))return 'Électricité';
+  return 'Autre';
+}
 function impBuild(d,label){
   let ht=d.ht,ttc=d.ttc; if(!ht&&ttc)ht=ttc/(1+(+S.cfg.tvaDef||10)/100);
   const sg=/avoir|refund/.test(d.type)?-1:1; if(sg<0){ht=-Math.abs(ht);ttc=-Math.abs(ttc)}
@@ -1343,7 +1353,7 @@ function impFactures(docs,st){
     const old=S.factures.find(x=>x.num===d.num); if(old&&!old.ext){st.skip++;return}
     if(!old&&!d.cl){st.skip++;return}
     const cl=old?null:impClient(d,st), dt=d.dt||(old&&old.date)||today(), dev=d.or?S.devis.find(x=>x.num===d.or):null;
-    const f={...(old||{}),id:old?old.id:uid(),num:d.num,clientId:old?old.clientId:cl.id,date:dt,echeance:d.ec||(old&&old.echeance)||addDays(dt,30),statut:/annul/.test(d.sf)?'Annulée':'Émise',ext:true,type:old?old.type:'Autre',lignes:impBuild(d,'Facture '+d.num)};
+    const f={...(old||{}),id:old?old.id:uid(),num:d.num,clientId:old?old.clientId:cl.id,date:dt,echeance:d.ec||(old&&old.echeance)||addDays(dt,30),statut:/annul/.test(d.sf)?'Annulée':'Émise',ext:true,type:(old&&old.type&&old.type!=='Autre')?old.type:((dev&&dev.type&&dev.type!=='Autre')?dev.type:impType(impBuild(d,'Facture '+d.num))),lignes:impBuild(d,'Facture '+d.num)};
     if(!f.chantierId&&dev&&dev.chantierId)f.chantierId=dev.chantierId;
     let ch=!old||JSON.stringify(old)!==JSON.stringify(f); if(ch)save('factures',f);
     const tot=r2(totals(f.lignes).ttc), pays=S.paiements.filter(p=>p.factureId===f.id), imp=pays.filter(p=>p.note==='Import'), man=r2(pays.filter(p=>p.note!=='Import').reduce((a,p)=>a+(+p.montant||0),0));
@@ -1365,7 +1375,7 @@ function impDevis(docs,st){
     const cl=old?null:impClient(d,st), dt=d.dt||(old&&old.date)||today(), s=d.sf;
     let sta=/accept|sign|gagn|commande|verrouill/.test(s)?'Accepté':/refus|perdu|annul|rejet/.test(s)?'Refusé':/attente/.test(s)?'En attente':/^devis$|brouillon/.test(s)?'Brouillon':'Envoyé';
     if(old&&old.statut==='Refusé'&&sta!=='Accepté')sta='Refusé';
-    const o={...(old||{}),id:old?old.id:uid(),num:d.num,clientId:old?old.clientId:cl.id,date:dt,dateEnvoi:(old&&old.dateEnvoi)||dt,validite:d.va||(old&&old.validite)||addDays(dt,30),statut:sta,ext:true,type:old?old.type:'Autre',titre:old?old.titre:'',lignes:impBuild(d,'Devis '+d.num)};
+    const o={...(old||{}),id:old?old.id:uid(),num:d.num,clientId:old?old.clientId:cl.id,date:dt,dateEnvoi:(old&&old.dateEnvoi)||dt,validite:d.va||(old&&old.validite)||addDays(dt,30),statut:sta,ext:true,type:(old&&old.type&&old.type!=='Autre')?old.type:impType(impBuild(d,'Devis '+d.num)),titre:old?old.titre:'',lignes:impBuild(d,'Devis '+d.num)};
     if(sta==='Accepté'&&!o.dateAcceptation)o.dateAcceptation=old?today():dt;
     if(!old){save('devis',o);st.n++}else if(JSON.stringify(old)!==JSON.stringify(o)){save('devis',o);st.u++}else st.same++;
   });
