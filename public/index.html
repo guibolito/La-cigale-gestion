@@ -1293,25 +1293,35 @@ function saveFacture(id){
   save('factures',o); closeModal(); render(); toast('Facture enregistrée.');
 }
 const _pfa=pFactures;
-pFactures=()=>_pfa()+`<div class="card pad" style="margin-top:14px"><div class="row"><b>Importer depuis mon logiciel de facturation</b><span class="muted mini">export CSV avec : numéro, client, date, échéance, HT, TVA (taux), TTC, payée (oui/non)</span><span class="sp"></span><button class="btn sm" data-a="impFact">Choisir un fichier</button><input type="file" id="imp-fact" accept=".csv,text/csv,text/plain" hidden></div></div>`;
+pFactures=()=>_pfa()+`<div class="card pad" style="margin-top:14px"><div class="row"><b>Importer depuis mon logiciel de facturation</b><span class="muted mini">export CSV (Odoo, Costructor…) avec : numéro, client, date, échéance, HT, TTC, statut de paiement</span><span class="sp"></span><button class="btn sm" data-a="impFact">Choisir un fichier</button><input type="file" id="imp-fact" accept=".csv,text/csv,text/plain" hidden></div></div>`;
 A.impFact=()=>$('#imp-fact').click();
-const numFr=s=>{const v=parseFloat(String(s||'').replace(/[^\d,.\-]/g,'').replace(/\s/g,'').replace(',','.'));return isFinite(v)?v:0};
+const numFr=s=>{let t=String(s||'').replace(/[^\d,.\-]/g,'');const a=t.lastIndexOf(','),b=t.lastIndexOf('.');if(a>=0&&b>=0){t=a>b?t.replace(/\./g,'').replace(',','.'):t.replace(/,/g,'')}else t=t.replace(',','.');const v=parseFloat(t);return isFinite(v)?v:0};
+const impRows=t=>{t=t.replace(/^\ufeff/,'');const f=t.split(/\r?\n/)[0]||'',sep=f.includes(';')?';':(f.includes('\t')&&!f.includes(',')?'\t':',');const rows=[];let r=[],c='',q=false;
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+    else if(ch==='"')q=true; else if(ch===sep){r.push(c);c=''} else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;r.push(c);rows.push(r);r=[];c=''} else c+=ch}
+  if(c!==''||r.length){r.push(c);rows.push(r)} return rows.filter(r=>r.some(x=>String(x).trim()))};
+const impHd=r=>r.map(h=>norm(h).replace(/[’`]/g,"'").trim()), impIx=hd=>k=>{for(const x of k){const i=x[0]==='='?hd.indexOf(x.slice(1)):hd.findIndex(h=>h.startsWith(x));if(i>=0)return i}return -1};
 const dateFr=s=>{s=String(s||'').trim();const m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/.exec(s);if(m)return (m[3].length===2?'20'+m[3]:m[3])+'-'+pad(+m[2])+'-'+pad(+m[1]);return /^\d{4}-\d{2}-\d{2}/.test(s)?s.slice(0,10):''};
 document.addEventListener('change',async e=>{
   if(e.target.id!=='imp-fact'||!e.target.files[0])return;
-  const ls=(await e.target.files[0].text()).replace(/^﻿/,'').split(/\r?\n/).filter(x=>x.trim()); e.target.value='';
-  if(ls.length<2){toast('Fichier vide.');return}
-  const sep=ls[0].includes(';')?';':',', hd=ls[0].split(sep).map(h=>norm(h).trim()), ix=k=>hd.findIndex(h=>k.some(x=>h.startsWith(x)));
-  const c={num:ix(['num','n°','n ','facture','piece']),cl:ix(['client','tiers','nom']),dt:ix(['date','emis']),ec:ix(['echeance','ech']),ht:ix(['ht','montant ht','total ht']),tva:ix(['tva']),ttc:ix(['ttc','total ttc','montant ttc']),pay:ix(['pay','regl','solde'])};
+  const R=impRows(await e.target.files[0].text()); e.target.value='';
+  if(R.length<2){toast('Fichier vide.');return}
+  const hd=impHd(R[0]), ix=impIx(hd);
+  const c={num:ix(['num','n°','n ','facture','piece']),cl:ix(['=client','client','tiers','partenaire','nom']),dt:ix(['date de la facture','date de facturation','date de fact','date','emis']),ec:ix(["date d'ech",'echeance','ech']),ht:ix(['ht','montant ht','total ht','total hors','montant hors','hors taxe']),tva:ix(['tva']),ttc:ix(['ttc','total ttc','montant ttc','=total','montant total']),pay:ix(['statut de paiement','etat de paiement','pay','regl','solde']),du:ix(['montant du','total du','reste','=du']),sf:ix(['=statut','=etat','=status'])};
   if(c.num<0||c.cl<0||(c.ht<0&&c.ttc<0)){toast('Colonnes attendues : numéro, client et montant (HT ou TTC).');return}
-  let n=0,skip=0,nc=0;
-  ls.slice(1).forEach(l=>{const v=l.split(sep).map(x=>x.replace(/^"|"$/g,'').trim()),g=k=>c[k]>=0?v[c[k]]||'':'';
-    const num=g('num'),nom=g('cl'); if(!num||!nom||S.factures.some(x=>x.num===num)){skip++;return}
+  let n=0,skip=0,nc=0,dr=0;
+  R.slice(1).forEach(v=>{const g=k=>c[k]>=0?String(v[c[k]]||'').trim():'';
+    const num=g('num'),nom=g('cl'),sf=norm(g('sf'));
+    if(!num||num==='/'||/brouillon|draft/.test(norm(num))||/brouillon|draft/.test(sf)){dr++;return}
+    if(!nom||S.factures.some(x=>x.num===num)){skip++;return}
     let cl=S.clients.find(x=>norm(x.nom)===norm(nom)); if(!cl){cl=save('clients',{id:uid(),nom,type:'particulier',source:'Autre',entretien:{}});nc++}
     let ht=numFr(g('ht')),ttc=numFr(g('ttc')),tv=numFr(g('tva')); if(!ht&&ttc)ht=ttc/1.1; let tx=ht&&ttc?nearTva((ttc/ht-1)*100):(tv&&tv<=30?nearTva(tv):(ht&&tv?nearTva(tv/ht*100):10));
-    const d=dateFr(g('dt'))||today(),f=save('factures',{id:uid(),num,clientId:cl.id,date:d,echeance:dateFr(g('ec'))||addDays(d,30),statut:'Émise',ext:true,type:'Autre',lignes:[{d:'Facture '+num,q:1,pu:r2(ht),tva:tx,c:0,h:0}]});
-    if(/^(oui|yes|1|x|pay)/.test(norm(g('pay'))))save('paiements',{id:uid(),factureId:f.id,date:d,montant:r2(totals(f.lignes).ttc),mode:'Virement',note:'Import'});n++});
-  render();toast(`${n} facture(s) importée(s)${nc?`, ${nc} client(s) créé(s)`:''}${skip?`, ${skip} ignorée(s)`:''}.`);
+    const d=dateFr(g('dt'))||today(),f=save('factures',{id:uid(),num,clientId:cl.id,date:d,echeance:dateFr(g('ec'))||addDays(d,30),statut:/annul/.test(sf)?'Annulée':'Émise',ext:true,type:'Autre',lignes:[{d:'Facture '+num,q:1,pu:r2(ht),tva:tx,c:0,h:0}]});
+    const tot=r2(totals(f.lignes).ttc); let paid=0;
+    if(c.du>=0&&g('du')!=='')paid=Math.max(0,r2(tot-numFr(g('du')))); else if(/^(oui|yes|1|x|pay)/.test(norm(g('pay'))))paid=tot;
+    if(paid>0.004&&f.statut!=='Annulée')save('paiements',{id:uid(),factureId:f.id,date:d,montant:Math.min(paid,tot),mode:'Virement',note:'Import'});n++});
+  render();toast(`${n} facture(s) importée(s)${nc?`, ${nc} client(s) créé(s)`:''}${skip?`, ${skip} déjà présente(s) ou ignorée(s)`:''}${dr?`, ${dr} brouillon(s) laissé(s) de côté`:''}.`);
 });
 /* ============ Remise sur devis ============ */
 A.addRemise=()=>{const L=DR.o.lignes.filter(l=>l.d||+l.pu),t=totals(L).ht,tv=(L[0]&&+L[0].tva)||+S.cfg.tvaDef||10;DR.o.lignes.push({d:'Remise commerciale',q:1,pu:-Math.round(t*0.05),tva:tv,c:0,h:0});remountLines()};
@@ -1631,23 +1641,23 @@ const _sd=saveDevis; saveDevis=function(id){
   if(o.statut==='Accepté'&&old!=='Accepté'){o.dateAcceptation=today();if(!o.chantierId){const ch=mkChantier(o);o.chantierId=ch.id;toast('Devis accepté : chantier '+ch.num+' créé.')}}
   save('devis',o);closeModal();render();if(!(o.statut==='Accepté'&&old!=='Accepté'))toast('Devis enregistré.');
 };
-const _pd9=pDevis; pDevis=()=>_pd9()+(S.cfg.devisExterne?`<div class="card pad" style="margin-top:14px"><div class="row"><b>Importer mes devis depuis ${esc(S.cfg.logiciel||'mon logiciel')}</b><span class="muted mini">export CSV avec : numéro, client, date, validité, HT, TVA (taux), TTC, statut</span><span class="sp"></span><button class="btn sm" data-a="impDev">Choisir un fichier</button><input type="file" id="imp-dev" accept=".csv,text/csv,text/plain" hidden></div></div>`:'');
+const _pd9=pDevis; pDevis=()=>_pd9()+(true?`<div class="card pad" style="margin-top:14px"><div class="row"><b>Importer mes devis depuis ${esc(S.cfg.logiciel||'mon logiciel')}</b><span class="muted mini">export CSV (Odoo, Costructor…) avec : numéro, client, date, validité, HT, TTC, statut</span><span class="sp"></span><button class="btn sm" data-a="impDev">Choisir un fichier</button><input type="file" id="imp-dev" accept=".csv,text/csv,text/plain" hidden></div></div>`:'');
 A.impDev=()=>$('#imp-dev').click();
 document.addEventListener('change',async e=>{
   if(e.target.id!=='imp-dev'||!e.target.files[0])return;
-  const ls=(await e.target.files[0].text()).replace(/^﻿/,'').split(/\r?\n/).filter(x=>x.trim()); e.target.value='';
-  if(ls.length<2){toast('Fichier vide.');return}
-  const sep=ls[0].includes(';')?';':',', hd=ls[0].split(sep).map(h=>norm(h).trim()), ix=k=>hd.findIndex(h=>k.some(x=>h.startsWith(x)));
-  const c={num:ix(['num','n°','n ','devis','piece','reference']),cl:ix(['client','tiers','nom']),dt:ix(['date','emis','envoi','creation']),va:ix(['valid','echeance']),ht:ix(['ht','montant ht','total ht']),tva:ix(['tva']),ttc:ix(['ttc','total ttc','montant ttc']),st:ix(['statut','etat','status'])};
+  const R=impRows(await e.target.files[0].text()); e.target.value='';
+  if(R.length<2){toast('Fichier vide.');return}
+  const hd=impHd(R[0]), ix=impIx(hd);
+  const c={num:ix(['num','n°','n ','reference de la commande','devis','piece','reference']),cl:ix(['=client','client','tiers','partenaire','nom']),dt:ix(['date de creation','date de commande','date de devis','date','emis','envoi','creation']),va:ix(['expiration','valid','echeance']),ht:ix(['ht','montant ht','total ht','total hors','montant hors','hors taxe']),tva:ix(['tva']),ttc:ix(['ttc','total ttc','montant ttc','=total','montant total']),st:ix(['=statut','=etat','=status','statut','etat','status'])};
   if(c.num<0||c.cl<0||(c.ht<0&&c.ttc<0)){toast('Colonnes attendues : numéro, client et montant (HT ou TTC).');return}
   let n=0,skip=0,nc=0;
-  ls.slice(1).forEach(l=>{const v=l.split(sep).map(x=>x.replace(/^"|"$/g,'').trim()),g=k=>c[k]>=0?v[c[k]]||'':'';
-    const num=g('num'),nom=g('cl'); if(!num||!nom||S.devis.some(x=>x.num===num)){skip++;return}
+  R.slice(1).forEach(v=>{const g=k=>c[k]>=0?String(v[c[k]]||'').trim():'';
+    const num=g('num'),nom=g('cl'); if(!num||num==='/'||!nom||S.devis.some(x=>x.num===num)){skip++;return}
     let cl=S.clients.find(x=>norm(x.nom)===norm(nom)); if(!cl){cl=save('clients',{id:uid(),nom,type:'particulier',source:'Autre',entretien:{}});nc++}
     let ht=numFr(g('ht')),ttc=numFr(g('ttc')),tv=numFr(g('tva')); if(!ht&&ttc)ht=ttc/1.1; const tx=ht&&ttc?nearTva((ttc/ht-1)*100):(tv&&tv<=30?nearTva(tv):10);
-    const s=norm(g('st')), st=/accept|sign|gagn/.test(s)?'Accepté':/refus|perdu|annul|rejet/.test(s)?'Refusé':/attente/.test(s)?'En attente':'Envoyé', d=dateFr(g('dt'))||today();
+    const s=norm(g('st')), st=/accept|sign|gagn|bon de commande|verrouill/.test(s)?'Accepté':/refus|perdu|annul|rejet/.test(s)?'Refusé':/attente/.test(s)?'En attente':/^devis$|brouillon/.test(s)?'Brouillon':'Envoyé', d=dateFr(g('dt'))||today();
     save('devis',{id:uid(),num,clientId:cl.id,date:d,dateEnvoi:d,validite:dateFr(g('va'))||addDays(d,30),statut:st,ext:true,type:'Autre',titre:'',lignes:[{d:'Devis '+num,q:1,pu:r2(ht),tva:tx,c:0,h:0}],...(st==='Accepté'?{dateAcceptation:d}:{})});n++});
-  render();toast(`${n} devis importé(s)${nc?`, ${nc} client(s) créé(s)`:''}${skip?`, ${skip} ignoré(s)`:''}.`);
+  render();toast(`${n} devis importé(s)${nc?`, ${nc} client(s) créé(s)`:''}${skip?`, ${skip} déjà présent(s) ou ignoré(s)`:''}.`);
 });
 const _ag3=agenda; agenda=function(){const out=_ag3();
   S.devis.filter(d=>d.statut==='Accepté'&&!d.chantierId&&(d.dateAcceptation||d.date||'')>=addDays(today(),-60)).forEach(d=>out.push({k:'Devis accepté : créer le chantier',t:`${d.num} · ${cliName(d.clientId)} · ${eur0(dTot(d).ht)} HT`,d:d.dateAcceptation||d.date,a:'openDevis',id:d.id,ic:'tool'}));
