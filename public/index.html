@@ -273,8 +273,8 @@ const DEF={nom:'La Cigale Énergie',adresse:'',siret:'',tel:'',email:'',iban:'',
 const RELANCE_J=[2,5,10,20], RELANCE_T=['SMS / WhatsApp','Appel','Email','Dernier message'];
 
 /* ============ Données : base partagée (db) ou stockage local de secours ============ */
-const COLS=['clients','devis','chantiers','factures','paiements','depenses','leads','interactions','campagnes','taches','recurrentes','equipements','interventions','commandes'];
-const S={clients:[],devis:[],chantiers:[],factures:[],paiements:[],depenses:[],leads:[],interactions:[],campagnes:[],taches:[],recurrentes:[],equipements:[],interventions:[],commandes:[],journal:[],cfg:structuredClone(DEF)};
+const COLS=['clients','devis','chantiers','factures','paiements','depenses','leads','interactions','campagnes','taches','recurrentes','equipements','interventions','commandes','estimations'];
+const S={clients:[],devis:[],chantiers:[],factures:[],paiements:[],depenses:[],leads:[],interactions:[],campagnes:[],taches:[],recurrentes:[],equipements:[],interventions:[],commandes:[],estimations:[],journal:[],cfg:structuredClone(DEF)};
 let db=null, mode='…', loaded=false;
 const LS='cigale-gestion-v1';
 const lsGet=()=>{try{return JSON.parse(localStorage.getItem(LS)||'null')}catch{return null}};
@@ -784,7 +784,7 @@ function pParams(){
   <div class="card pad"><h2 style="font-size:21px;margin-bottom:12px">Messages de relance</h2><div class="form">${RELANCE_J.map((j,i)=>`<div class="field full"><label for="m-${i}">J+${j} · ${RELANCE_T[i]} (utilisez [Client], [Devis], [Entreprise])</label><textarea id="m-${i}" data-msg="${i}" rows="2">${esc(c.msgs[i])}</textarea></div>`).join('')}</div></div>
   <div class="card"><div class="pad row"><h2 style="font-size:21px">Catalogue de prestations</h2><span class="muted mini">prix HT, coût matière et heures servent aux devis et à la marge estimée</span><span class="sp"></span><button class="btn sm" data-a="addCat">${I('plus',15)} Ajouter</button><button class="btn sm" data-a="resetCat">Remettre le catalogue d’origine</button></div><div class="tw"><table class="lines"><thead><tr><th>Catégorie</th><th>Prestation</th><th>Prix HT</th><th>Coût matière</th><th>Heures</th><th>TVA %</th><th></th></tr></thead><tbody>${catalogue().map((x,i)=>`<tr><td style="width:150px"><input data-cat="${i}" data-f="cat" value="${esc(x.cat)}" aria-label="Catégorie"></td><td style="min-width:260px"><input data-cat="${i}" data-f="lib" value="${esc(x.lib)}" aria-label="Prestation"></td><td style="width:100px"><input data-cat="${i}" data-f="pu" type="number" step="any" value="${x.pu}" aria-label="Prix HT"></td><td style="width:100px"><input data-cat="${i}" data-f="cout" type="number" step="any" value="${x.cout}" aria-label="Coût matière"></td><td style="width:80px"><input data-cat="${i}" data-f="h" type="number" step="any" value="${x.h}" aria-label="Heures"></td><td style="width:80px"><input data-cat="${i}" data-f="tva" type="number" step="any" value="${x.tva}" aria-label="TVA"></td><td style="width:44px"><button class="btn sm ghost bad" data-a="rmCat" data-i="${i}" aria-label="Supprimer">×</button></td></tr>`).join('')}</tbody></table></div></div>
   <div class="card pad"><h2 style="font-size:21px;margin-bottom:6px">Données et sauvegarde</h2><p class="muted" style="margin:0 0 12px">${mode==='cloud'?'Vos données sont enregistrées en ligne et partagées entre vos appareils.':'Mode local : les données restent dans ce navigateur. Faites des sauvegardes régulières.'} ${S.clients.length} clients · ${S.devis.length} devis · ${S.chantiers.length} chantiers · ${S.factures.length} factures · ${S.depenses.length} dépenses.</p>
-  <div class="row"><button class="btn pri" data-a="backup">${I('dl')}Sauvegarde complète (JSON)</button>${COLS.filter(x=>x!=='paiements').map(x=>`<button class="btn sm" data-a="csv" data-c="${x}">CSV ${x}</button>`).join('')}<label class="btn sm" for="imp-file" style="cursor:pointer">Importer une sauvegarde</label><input id="imp-file" type="file" accept=".json,application/json" hidden></div>
+  <div class="row"><button class="btn pri" data-a="backup">${I('dl')}Sauvegarde complète (JSON)</button>${COLS.filter(x=>x!=='paiements'&&x!=='estimations').map(x=>`<button class="btn sm" data-a="csv" data-c="${x}">CSV ${x}</button>`).join('')}<label class="btn sm" for="imp-file" style="cursor:pointer">Importer une sauvegarde</label><input id="imp-file" type="file" accept=".json,application/json" hidden></div>
   <hr style="margin:14px 0"><div class="row"><button class="btn sm" data-a="loadDemo">Charger les données fictives</button><button class="btn sm bad" data-a="clearDemo">Supprimer les données fictives</button><span class="sp"></span><button class="btn sm bad" data-a="wipe">Tout effacer</button></div></div>`;
 }
 /* ============ PDF, exports, import ============ */
@@ -1918,13 +1918,13 @@ PAGES.push(['estimateur','Estimateur','doc','Ventes et CRM']);
 GROUPS.devis=[['devis','Devis'],['estimateur','Estimateur']]; HEAD.devis=HEAD.estimateur='devis';
 const E=()=>ui.est||(ui.est={cat:'clim',q:{},m:10,later:false});
 const estItems=()=>EST0.map(x=>({code:x[0],lib:x[1],pu:(S.cfg.estPrix||{})[x[0]]!=null?+S.cfg.estPrix[x[0]]:x[2],on:!!x[3]}));
-const estSel=()=>estItems().filter(x=>(E().q[x.code]||0)>0).map(x=>({...x,q:E().q[x.code]}));
-const estTot=()=>estSel().reduce((a,x)=>a+x.q*x.pu,0);
+const estSel=(q=E().q)=>estItems().filter(x=>(q[x.code]||0)>0).map(x=>({...x,q:q[x.code]}));
+const estTot=(q)=>estSel(q).reduce((a,x)=>a+x.q*x.pu,0);
 const estRound=(v,up)=>{const s=v>=1000?50:10;return up?Math.ceil(v/s)*s:Math.floor(v/s)*s};
-const estRange=()=>{const t=estTot();if(!(t>0))return null;return {t,lo:estRound(t,false),hi:estRound(t*(1+E().m/100),true)}};
-const estMsg=()=>{const r=estRange();if(!r)return '';const s=estSel(),l=s.slice(0,4).map(x=>x.q+' × '+x.lib).join(', ')+(s.length>4?'…':'');
+const estRange=(q=E().q,m=E().m)=>{const t=estTot(q);if(!(t>0))return null;return {t,lo:estRound(t,false),hi:estRound(t*(1+m/100),true)}};
+const estMsg=(q=E().q,m=E().m)=>{const r=estRange(q,m);if(!r)return '';const s=estSel(q),l=s.slice(0,4).map(x=>x.q+' × '+x.lib).join(', ')+(s.length>4?'…':'');
   return `Bonjour, pour ${l}, comptez entre ${eur0(r.lo)} et ${eur0(r.hi)} (TVA non applicable, art. 293 B du CGI).\nC’est une estimation : le prix définitif est confirmé par un devis gratuit, sans surprise, avant de commencer.\nLa Cigale Énergie`};
-const estLines=()=>estSel().map(x=>`${x.code} | ${x.lib} | Qté ${x.q} | PU ${x.pu} €`).join('\n')+(estRange()?`\nTotal ${estRange().t} €`:'');
+const estLines=(q=E().q,m=E().m)=>estSel(q).map(x=>`${x.code} | ${x.lib} | Qté ${x.q} | PU ${x.pu} €`).join('\n')+(estRange(q,m)?`\nTotal ${estRange(q,m).t} €`:'');
 PX.estimateur=()=>{
   const e=E(),r=estRange(),cats=EST_CATS.filter(c=>EST0.some(x=>c[2](x[0])&&(x[3]||e.later)));
   if(!cats.some(c=>c[0]===e.cat))e.cat=cats[0][0];
@@ -1939,7 +1939,7 @@ PX.estimateur=()=>{
     <div class="pad"><label class="row" style="gap:8px;cursor:pointer"><input type="checkbox" data-a="estLater"${e.later?' checked':''}> <span class="muted mini">Afficher aussi les activités à venir (électricité, solaire, bornes, portail)</span></label></div></div>
   <div class="card pad" style="margin-top:12px;position:sticky;bottom:calc(70px + env(safe-area-inset-bottom));border:2px solid var(--accent);padding:10px 14px;padding-right:76px">${r?`<div style="font-size:19px;font-weight:800;line-height:1.2">Annoncez : ${eur0(r.lo)} à ${eur0(r.hi)}</div>
     <div class="muted mini" style="margin:2px 0 8px">Prévu ${eur0(r.t)} · maximum ${eur0(r.hi)} · sans TVA</div>
-    <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-a="estCopy">Copier le message</button><button class="btn sm" data-a="estCopyL">Copier pour Odoo</button><button class="btn sm ghost" data-a="estReset">Effacer</button></div>`:`<b>Choisissez des prestations ci-dessus</b><div class="muted mini">Touchez + pour ajouter, le prix à annoncer s’affiche ici.</div>`}</div>`;
+    <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-a="estNote">Enregistrer une note</button><button class="btn sm" data-a="estCopy">Copier le message</button><button class="btn sm" data-a="estCopyL">Copier pour Odoo</button><button class="btn sm ghost" data-a="estReset">Effacer</button></div>`:`<b>Choisissez des prestations ci-dessus</b><div class="muted mini">Touchez + pour ajouter, le prix à annoncer s’affiche ici.</div>`}</div>${estList()}`;
 };
 Object.assign(A,{
  estQ:d=>{const e=E(),n=Math.max(0,(e.q[d.c]||0)+(+d.d||0));if(n)e.q[d.c]=n;else delete e.q[d.c];render()},
@@ -1948,6 +1948,32 @@ Object.assign(A,{
  estCopy:async()=>{const t=estMsg();try{await navigator.clipboard.writeText(t);toast('Message copié.')}catch{modal('Message à copier',`<textarea rows="7" readonly style="width:100%">${esc(t)}</textarea>`,'<button class="btn pri" data-a="close">Fermer</button>')}},
  estCopyL:async()=>{const t=estLines();try{await navigator.clipboard.writeText(t);toast('Lignes copiées.')}catch{modal('Lignes à copier',`<textarea rows="8" readonly style="width:100%">${esc(t)}</textarea>`,'<button class="btn pri" data-a="close">Fermer</button>')}},
  goEst:()=>{closeModal();location.hash='#estimateur'}
+});
+
+
+const estList=()=>{const L=S.estimations.slice().sort((a,b)=>String(b.created||b.date).localeCompare(String(a.created||a.date)));
+  return `<div class="sec" style="margin-top:18px"><h2>Mes notes d’estimation</h2><span>${L.length?L.length+' enregistrée'+(L.length>1?'s':''):'touchez « Enregistrer une note » pour garder une estimation avec vos remarques'}</span></div>`+(L.length?`<div class="card">${L.map(x=>{const r=estRange(x.q,x.m);return `<button class="row" data-a="estOpen" data-id="${x.id}" style="width:100%;text-align:left;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;gap:10px;cursor:pointer;color:inherit"><div style="flex:1;min-width:0"><b>${esc(x.nom||'Sans nom')}</b><div class="muted mini">${fdate(x.date)}${x.note?' · '+esc(x.note.slice(0,60))+(x.note.length>60?'…':''):''}</div></div><b class="num">${r?eur0(r.lo)+' à '+eur0(r.hi):''}</b></button>`}).join('')}</div>`:'');
+};
+function estForm(x){
+  const o=x||{q:{...E().q},m:E().m,date:today(),nom:'',tel:'',note:''}, r=estRange(o.q,o.m), s=estSel(o.q);
+  modal(x?'Note d’estimation':'Enregistrer une note',`<div class="alert info" style="margin-bottom:8px"><span>${r?`<b>${eur0(r.lo)} à ${eur0(r.hi)}</b> · prévu ${eur0(r.t)}`:'Aucune prestation choisie'}<br>${s.map(i=>esc(i.q+' × '+i.lib)).join('<br>')}</span></div>
+  <div class="form">${F('Client ou lieu','enom',o.nom||'',{ph:'Ex. M. Martin, villa à Hyères'})}${F('Téléphone','etel',o.tel||'',{type:'tel'})}${F('Mes remarques','enote',o.note||'',{area:1,rows:8,full:1,ph:'Ce que j’ai vu, les contraintes, les questions du client…'})}</div>`,
+  `${x?`<button class="btn bad sm" data-a="estDel" data-id="${x.id}">Supprimer</button>`:''}<span class="sp"></span><button class="btn" data-a="close">Fermer</button><button class="btn pri" data-a="estSave" data-id="${x?x.id:''}">Enregistrer</button>`);
+}
+Object.assign(A,{
+ estNote:()=>{if(!estRange()){toast('Choisissez d’abord une prestation.');return}estForm(null)},
+ estSave:d=>{const prev=d.id?S.estimations.find(y=>y.id===d.id):null,e=E();
+  const o=prev?{...prev}:{id:uid(),date:today(),created:new Date().toISOString(),q:{...e.q},m:e.m};
+  Object.assign(o,{nom:G('enom'),tel:G('etel'),note:$('#f-enote').value});
+  save('estimations',o);closeModal();render();toast('Note enregistrée.')},
+ estOpen:d=>{const x=S.estimations.find(y=>y.id===d.id);if(!x)return;estForm(x);
+  const b=document.createElement('div');b.className='row';b.style.cssText='gap:6px;flex-wrap:wrap;margin-top:10px';
+  b.innerHTML=`<button class="btn sm" data-a="estReopen" data-id="${x.id}">Rouvrir dans l’estimateur</button><button class="btn sm" data-a="estCopyN" data-id="${x.id}">Copier le message</button><button class="btn sm" data-a="estLead" data-id="${x.id}">Créer un prospect</button>`;
+  const f=$('#f-enote');if(f&&f.closest('.form'))f.closest('.form').insertAdjacentElement('afterend',b)},
+ estReopen:d=>{const x=S.estimations.find(y=>y.id===d.id);if(!x)return;ui.est={...E(),q:{...x.q},m:x.m};closeModal();location.hash='#estimateur';render();scrollTo(0,0)},
+ estCopyN:async d=>{const x=S.estimations.find(y=>y.id===d.id);if(!x)return;const t=estMsg(x.q,x.m);try{await navigator.clipboard.writeText(t);toast('Message copié.')}catch{modal('Message à copier',`<textarea rows="7" readonly style="width:100%">${esc(t)}</textarea>`,'<button class="btn pri" data-a="close">Fermer</button>')}},
+ estLead:d=>{const x=S.estimations.find(y=>y.id===d.id);if(!x)return;const r=estRange(x.q,x.m);closeModal();leadForm({nom:x.nom||'',nomf:x.nom||'',tel:x.tel||'',valeur:r?r.t:'',notes:(x.note||'')+(x.note?'\n':'')+'Estimation : '+estSel(x.q).map(i=>i.q+' × '+i.lib).join(', ')+(r?' ('+eur0(r.lo)+' à '+eur0(r.hi)+')':'')})},
+ estDel:d=>confirmBox('Supprimer cette note d’estimation ?',()=>{del('estimations',d.id);closeModal();render()},'Supprimer')
 });
 
 </script>
