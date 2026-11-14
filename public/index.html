@@ -1664,8 +1664,18 @@ const _ag3=agenda; agenda=function(){const out=_ag3();
   return out.sort((a,b)=>String(a.d).localeCompare(String(b.d)))};
 const _ao=actsOf; actsOf=x=>x.k==='Devis accepté : créer le chantier'?bt('mkCh',x.id,'Créer le chantier'):_ao(x);
 A.mkCh=d=>{const x=S.devis.find(y=>y.id===d.id);const ch=mkChantier(x);save('devis',{...x,chantierId:ch.id});render();toast('Chantier '+ch.num+' créé.')};
+A.impAll=()=>$('#imp-all').click();
+document.addEventListener('change',async e=>{
+  if(e.target.id!=='imp-all'||!e.target.files.length)return;
+  const fs=[...e.target.files]; e.target.value='';
+  for(const f of fs){const R=impRows(await f.text()); if(R.length<2){toast('Fichier vide : '+f.name);continue}
+    const hd=impHd(R[0]).join('|'), fact=/montant du|paiement|date d'ech|facture|echeance/.test(hd)&&!/expiration/.test(hd);
+    const inp=document.createElement('input');inp.type='file';inp.id=fact?'imp-fact':'imp-dev';inp.hidden=true;document.body.appendChild(inp);
+    const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;inp.dispatchEvent(new Event('change',{bubbles:true}));
+    await new Promise(r=>setTimeout(r,400));inp.remove()}
+});
 A.toggleDevExt=()=>{S.cfg.devisExterne=!S.cfg.devisExterne;saveCfg();render();toast(S.cfg.devisExterne?'Les devis sont notés ici et faits dans votre logiciel.':'Les devis se font dans l’appli.')};
-const _pp9=pParams; pParams=()=>_pp9()+`<div class="card pad" style="margin-top:14px"><h2 style="font-size:21px;margin-bottom:6px">Logiciel de devis et de facturation</h2><div class="form"><div class="field"><label for="c-logiciel">Nom du logiciel</label><input id="c-logiciel" data-cfg="logiciel" value="${esc(S.cfg.logiciel||'')}" placeholder="Costructor"></div></div><p class="muted" style="margin:8px 0">${S.cfg.devisExterne?'Vos devis et factures se font dans ce logiciel. L’appli les note pour le suivi, les relances et les chantiers.':'Les devis se font dans l’appli (avec PDF). Les factures restent notées.'}</p><button class="btn sm" data-a="toggleDevExt">${S.cfg.devisExterne?'Faire mes devis dans l’appli à la place':'Noter mes devis depuis le logiciel externe'}</button></div>`;
+const _pp9=pParams; pParams=()=>_pp9()+`<div class="card pad" style="margin-top:14px"><h2 style="font-size:21px;margin-bottom:6px">Logiciel de devis et de facturation</h2><div class="form"><div class="field"><label for="c-logiciel">Nom du logiciel</label><input id="c-logiciel" data-cfg="logiciel" value="${esc(S.cfg.logiciel||'')}" placeholder="Costructor"></div></div><p class="muted" style="margin:8px 0">${S.cfg.devisExterne?'Vos devis et factures se font dans ce logiciel. L’appli les note pour le suivi, les relances et les chantiers.':'Les devis se font dans l’appli (avec PDF). Les factures restent notées.'}</p><button class="btn sm" data-a="toggleDevExt">${S.cfg.devisExterne?'Faire mes devis dans l’appli à la place':'Noter mes devis depuis le logiciel externe'}</button></div><div class="card pad" style="margin-top:14px;background:var(--surface2)"><div class="row"><b>Tout importer d’un coup</b><span class="muted mini">choisissez ensemble le fichier des devis et celui des factures (export CSV d’Odoo)</span><span class="sp"></span><button class="btn pri sm" data-a="impAll">Importer devis et factures</button><input type="file" id="imp-all" accept=".csv,text/csv,text/plain" multiple hidden></div></div>`;
 /* ===== Point pilotage hebdomadaire + note de l'assistant ===== */
 S.assist=null;
 const _id9=initData; initData=async function(){await _id9(); if(db){try{db.doc('pilotage/latest').onSnapshot(s=>{S.assist=s.exists?s.data():null;if(loaded&&ui.page==='pilotage')sched()},()=>{})}catch{}}};
