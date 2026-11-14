@@ -1692,7 +1692,7 @@ Object.assign(A,{
  cmdSt:d=>{const x=S.commandes.find(y=>y.id===d.id),s=d.s,n={...x,statut:s};if(s==='Livré'){n.dateLivraison=n.dateLivraison||today();if(+x.montant>0&&!x.compta){n.compta=true;save('depenses',{id:uid(),libelle:x.designation,categorie:'Matériel',fournisseur:x.fournisseur||'',date:today(),mode:'Virement',ht:r2(x.montant),tvaT:20,ttc:r2(x.montant*1.2),chantierId:x.chantierId||'',payee:false,justif:'',cmdId:x.id});toast('Livré : dépense créée (à payer).')}}save('commandes',n);render()},
  tacheLater:d=>{const x=S.taches.find(y=>y.id===d.id),b=x.echeance&&x.echeance>today()?x.echeance:today();save('taches',{...x,echeance:addDays(b,1)});render()}
 });
-/* ===== Devis faits dans le logiciel externe (Costructor) : l'appli les note et les suit ===== */
+/* ===== Devis faits dans le logiciel externe (Odoo) : l'appli les note et les suit ===== */
 DEF.devisExterne=false; DEF.logiciel='Odoo'; if(S.cfg.devisExterne===undefined)S.cfg.devisExterne=false; if(S.cfg.logiciel===undefined)S.cfg.logiciel='Odoo';
 const _df=devisForm; devisForm=function(d){
   if(!S.cfg.devisExterne||(d.id&&!d.ext))return _df(d);
@@ -1896,7 +1896,7 @@ A.quickGo=d=>{closeModal();setTimeout(()=>{if(d.k==='photoDep'){depenseForm({lib
 A.togFlt=(d,el)=>{const t=el.closest('.tools');t.classList.toggle('open');el.textContent=t.classList.contains('open')?'Masquer les filtres':'Filtres et tri'};
 {const _r=render;render=function(){_r();$$('.tools').forEach(t=>{if(!t.querySelector('select')||t.querySelector('.fbtn'))return;const q=t.querySelector('input[type=search]');const b='<button class="btn sm fbtn" data-a="togFlt" type="button">Filtres et tri</button>';q?q.insertAdjacentHTML('afterend',b):t.insertAdjacentHTML('afterbegin',b)})}}
 /* ===== Copier un devis / une facture vers Costructor, sans erreur ===== */
-const COSURL=()=>S.cfg.logicielUrl||'https://www.costructor.co';
+const COSURL=()=>S.cfg.logicielUrl||'https://la-cigale-energie-83.odoo.com';
 const nfr=n=>(+n||0).toFixed(2).replace('.',',');
 A.cpv=async(d,el)=>{const v=el.dataset.v||'';try{await navigator.clipboard.writeText(v);toast('Copié : '+(v.length>28?v.slice(0,28)+'…':v))}catch{const t=document.createElement('textarea');t.value=v;document.body.appendChild(t);t.select();try{document.execCommand('copy');toast('Copié.')}catch{}t.remove()}};
 A.cosOpen=(d)=>{
@@ -1909,7 +1909,7 @@ A.cosOpen=(d)=>{
   const all=ls.map((l,i)=>`${i+1}. ${l.d||''} | Qté ${+l.q||0} | PU HT ${nfr(l.pu)} € | ${fr?'TVA non applicable':'TVA '+(+l.tva||0)+' %'} | Total HT ${nfr(lt(l).ht)} €`).join('\n')+`\nTotal HT ${nfr(T.ht)} € | TVA ${nfr(T.tva)} € | Total TTC ${nfr(T.ttc)} €`;
   window.__cosT=T.ttc;
   modal('Copier vers Costructor',`<div class="alert info" style="margin-bottom:10px"><span>Touchez un champ pour le copier, collez-le dans Costructor, puis vérifiez le total à la fin.</span></div>
-  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px"><a class="btn pri" href="${esc(COSURL())}" target="_blank" rel="noopener">Ouvrir Costructor</a>${btn(all,'Tout copier')}${btn(c.nom||'','Client : '+esc(c.nom||'—'))}${doc.titre?btn(doc.titre,'Objet : '+esc(doc.titre)):''}</div>
+  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px"><a class="btn pri" href="${esc(COSURL())}" target="_blank" rel="noopener">Ouvrir ${esc(S.cfg.logiciel||'Odoo')}</a>${btn(all,'Tout copier')}${btn(c.nom||'','Client : '+esc(c.nom||'—'))}${doc.titre?btn(doc.titre,'Objet : '+esc(doc.titre)):''}</div>
   ${rows||'<div class="muted">Aucune ligne.</div>'}
   <div class="card pad" style="background:var(--surface2);margin-top:10px"><div class="row"><span>Total HT</span><span class="sp"></span><b>${eur(T.ht)}</b></div><div class="row"><span>TVA</span><span class="sp"></span><b>${fr?'non applicable':eur(T.tva)}</b></div><div class="row"><span>Total TTC</span><span class="sp"></span><b style="font-size:19px">${eur(T.ttc)}</b></div></div>
   <div class="card pad" style="margin-top:10px"><b>Contrôle</b><div class="muted mini" style="margin:2px 0 6px">Tapez le total TTC affiché dans Costructor :</div><input id="cos-chk" inputmode="decimal" placeholder="Ex. ${nfr(T.ttc)}" style="width:100%"><div id="cos-res" style="margin-top:8px;font-weight:700"></div></div>`,'<button class="btn" data-a="close">Fermer</button>');
@@ -1992,7 +1992,8 @@ Object.assign(A,{
 /* ===== Cohérence : formules d'entretien et coordonnées ===== */
 function migCoh(){
   S.clients.forEach(c=>{const f=c.entretien&&c.entretien.formule;if(f&&FOLD[f])save('clients',{...c,entretien:{...c.entretien,formule:FOLD[f]}})});
-  let ch=false;if(!S.cfg.tel){S.cfg.tel='06 45 40 01 57';ch=true}if(!S.cfg.adresse){S.cfg.adresse='Var et alentours';ch=true}if(ch)saveCfg();
+  let ch=false;if(!S.cfg.tel){S.cfg.tel='06 45 40 01 57';ch=true}if(!S.cfg.adresse){S.cfg.adresse='Var et alentours';ch=true}if(/co?n?structor/i.test(S.cfg.logiciel||'')){S.cfg.logiciel='Odoo';ch=true}if(/costructor/i.test(S.cfg.logicielUrl||'')){S.cfg.logicielUrl='https://la-cigale-energie-83.odoo.com';ch=true}
+  if(ch)saveCfg();
 }
 {const old=render;render=function(){if(loaded)try{migCoh()}catch(e){}old()}}
 </script>
